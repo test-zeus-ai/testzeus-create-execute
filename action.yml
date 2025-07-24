@@ -1,0 +1,67 @@
+name: 'Agentic Testing Action'
+
+description: 'Run tests and report results'
+author: 'TestZeus'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies  
+      shell: bash
+      run: |
+        pip install --upgrade testzeus-cli
+        sudo apt-get update && sudo apt-get install -y jq
+
+    - name: Login to TestZeus
+      shell: bash
+      run: |
+        echo "Logging into TestZeus..."
+        LOGIN_OUTPUT=$(testzeus login --email ${{ secrets.TESTZEUS_EMAIL }} --password ${{ secrets.TESTZEUS_PASSWORD }} 2>&1)
+
+        if echo "$LOGIN_OUTPUT" | grep -q "Login failed"; then
+          echo "❌ Login failed: aborting action."
+          exit 1
+        fi
+
+        echo "✅ Successfully logged into TestZeus."
+
+    - name: Generate Test Report
+      shell: bash
+      run: |
+        echo "Creating test..."
+        chmod +x ./scripts/create_test_report.sh
+        ./scripts/create_test_report.sh
+    
+    - name: Publish Test Report
+      uses: ctrf-io/github-test-reporter@v1
+      with:
+        report-path: 'ctrf-report.json'
+        template-path: 'templates/ctrf-report.hbs'
+        custom-report: true
+      if: always()
+    
+    - name: Notify on Success
+      if: success()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_TITLE: 'Test Suite Succeeded'
+        SLACK_MESSAGE: 'The smoke test suite ran successfully. View the run details here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        SLACK_COLOR: 'good'
+
+    - name: Notify on Failure
+      if: failure()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_TITLE: 'Test Suite Failed'
+        SLACK_MESSAGE: 'The smoke test suite failed. Please check the logs for details. View the run details here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        SLACK_COLOR: 'danger'

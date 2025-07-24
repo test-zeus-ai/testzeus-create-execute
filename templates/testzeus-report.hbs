@@ -1,0 +1,53 @@
+# 🧪 Test Results Summary
+
+| **Tests** | **Passed** | **Failed** | **Skipped** | **Other** | **Flaky** | **Duration** |
+|----------|------------|------------|-------------|-----------|-----------|--------------|
+| {{ctrf.summary.tests}} | {{ctrf.summary.passed}} | {{ctrf.summary.failed}} | {{add ctrf.summary.skipped ctrf.summary.pending}} | {{ctrf.summary.other}} | {{countFlaky ctrf.tests}} | {{formatDuration ctrf.summary.start ctrf.summary.stop}} |
+
+---
+
+## 📊 Overview
+- ✅ Passed: {{ctrf.summary.passed}} / {{ctrf.summary.tests}}
+- ❌ Failed: {{ctrf.summary.failed}}
+
+---
+
+## ⚙️ Execution Details
+{{#if ctrf.tool.name}}![tool](https://ctrf.io/assets/github/tools.svg) **Tool**: {{ctrf.tool.name}}{{/if}}  
+🔍 **Branch**: `{{github.branchName}}`  
+👤 **Triggered by**: `{{github.actor}}`
+
+---
+
+{{#if ctrf.summary.failed}}
+## ❌ Failed Tests
+
+{{#each ctrf.tests}}
+  {{#if (eq this.status "fail")}}
+  ### 🔴 {{this.extra.feature_name}} - {{this.extra.scenario_name}}
+  - ⏱️ Duration: {{formatDurationMs this.duration}}
+  - 🔗 TestZeus Run: [View](https://prod.testzeus.app/test-runs/{{this.extra.test_run_id}})
+  {{#if this.extra.test_data_id}}
+  - 🧾 Test Data: [View](https://prod.testzeus.app/test-data/{{this.extra.test_data_id.[0]}})
+  {{/if}}
+
+  {{#if (getCollapseLargeReports)}}
+  <details>
+    <summary><strong>View Steps</strong></summary>
+
+    {{#each this.steps}}
+    - {{#if (eq this.status "fail")}}❌{{else if (eq this.status "pass")}}✅{{/if}} {{this.name}}
+    {{/each}}
+
+  </details>
+  {{else}}
+  - **Steps**:
+    {{#each this.steps}}
+    - {{#if (eq this.status "fail")}}❌{{else if (eq this.status "pass")}}✅{{/if}} {{this.name}}
+  {{/each}}
+  {{/if}}
+
+  {{/if}}
+{{/each}}
+
+{{/if}}
