@@ -3,6 +3,14 @@ name: 'Agentic Testing Action'
 description: 'Run tests and report results'
 author: 'TestZeus'
 
+inputs:
+  email:
+    description: 'TestZeus login email'
+    required: true
+  password:
+    description: 'TestZeus login password'
+    required: true
+
 runs:
   using: 'composite'
   steps:
@@ -14,8 +22,8 @@ runs:
     - name: Login to TestZeus
       shell: bash
       run: |
-        echo "Logging into TestZeus..."
-        LOGIN_OUTPUT=$(testzeus login --email ${{ secrets.TESTZEUS_EMAIL }} --password ${{ secrets.TESTZEUS_PASSWORD }} 2>&1)
+        echo "🔐 Logging into TestZeus..."
+        LOGIN_OUTPUT=$(poetry run testzeus login --email "${{ inputs.email }}" --password "${{ inputs.password }}" 2>&1)
 
         if echo "$LOGIN_OUTPUT" | grep -q "Login failed"; then
           echo "❌ Login failed: aborting action."
