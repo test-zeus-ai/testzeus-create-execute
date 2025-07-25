@@ -9,6 +9,7 @@ A composite GitHub Action that runs automated tests using TestZeus and generates
 - 📱 Slack notifications for test results
 - 🔄 Support for multiple test cases and data files
 - 📎 Asset file upload support
+- 🌍 Environment configuration support for different test environments
 
 ## Prerequisites
 
@@ -21,17 +22,28 @@ your-repo/
 ├── tests/
 │   ├── test-example1/
 │   │   ├── example.feature          # Gherkin feature file
-│   │   └── test-data/
+│   │   ├── test-data/
+│   │   │   ├── case1/
+│   │   │   │   ├── data.txt         # Test data file
+│   │   │   │   └── assets/          # Optional asset files
+│   │   │   │       └── screenshot.png
+│   │   │   └── case2/
+│   │   │       ├── data.txt
+│   │   │       └── assets/
+│   │   └── test-environments/       # Optional environment configurations
 │   │       ├── case1/
-│   │       │   ├── data.txt         # Test data file
-│   │       │   └── assets/          # Optional asset files
-│   │       │       └── screenshot.png
+│   │       │   ├── data.txt         # Environment configuration file
+│   │       │   └── assets/          # Optional environment assets
+│   │       │       └── config.json
 │   │       └── case2/
 │   │           ├── data.txt
 │   │           └── assets/
 │   └── test-example2/
 │       ├── another.feature
-│       └── test-data/
+│       ├── test-data/
+│       │   └── case1/
+│       │       └── data.txt
+│       └── test-environments/       # Optional - matches test-data structure
 │           └── case1/
 │               └── data.txt
 └── templates/
@@ -41,8 +53,16 @@ your-repo/
 ### Required Files
 
 1. **Feature Files**: Each test directory must contain a `.feature` file with Gherkin scenarios
-2. **Data Files**: Each test case must have a `data.txt` file in its directory
+2. **Test Data Files**: Each test case must have a `data.txt` file in the `test-data/case_name/` directory
 3. **Template File**: Create `templates/ctrf-report.hbs` for custom report formatting
+
+### Optional Files
+
+4. **Environment Files**: Each test case can optionally have a corresponding `data.txt` file in the `test-environments/case_name/` directory
+   - Environment files contain configuration data for test execution environments
+   - Must follow the same directory structure as `test-data`
+   - If present, will be automatically associated with the corresponding test case
+   - Supports assets in the same way as test-data directories
 
 ## Setup
 
@@ -57,6 +77,8 @@ Configure these secrets in your GitHub repository (`Settings > Secrets and varia
 | `SLACK_WEBHOOK_URL` | Slack webhook URL for notifications | ❌ Optional |
 
 ### 2. Create CTRF Report Template (optional)
+
+![Test Results Summary](assets/test-results-summary.png)
 
 Create `templates/ctrf-report.hbs` in your repository:
 
@@ -117,7 +139,7 @@ jobs:
     
     steps:
     - name: Run TestZeus Tests
-      uses: your-username/testzeus-run-action@v1
+      uses: test-zeus-ai/testzeus-create-execute@v1
       env:
         TESTZEUS_EMAIL: ${{ secrets.TESTZEUS_EMAIL }}
         TESTZEUS_PASSWORD: ${{ secrets.TESTZEUS_PASSWORD }}
@@ -148,6 +170,47 @@ jobs:
         TESTZEUS_PASSWORD: ${{ secrets.TESTZEUS_PASSWORD }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
+
+## Test Environments
+
+The action supports optional test environment configurations that allow you to specify different execution environments for your tests.
+
+### How Test Environments Work
+
+1. **Structure**: Test environments follow the same directory structure as test-data
+2. **Matching**: Each test case in `test-data/case_name/` can have a corresponding `test-environments/case_name/`
+3. **Automatic Association**: When both exist, they are automatically linked during test creation
+4. **Optional**: Test environments are completely optional - tests work without them
+
+### Example Use Cases
+
+- **Different API endpoints** for staging vs production
+- **Database configurations** for different environments
+- **Authentication credentials** for various test environments
+- **Feature flags** or configuration settings
+- **Environment-specific assets** like certificates or config files
+
+### Sample Environment Structure
+
+```
+test-environments/
+├── staging/
+│   ├── data.txt              # Staging environment config
+│   └── assets/
+│       ├── staging-cert.pem
+│       └── staging-config.json
+└── production/
+    ├── data.txt              # Production environment config
+    └── assets/
+        ├── prod-cert.pem
+        └── prod-config.json
+```
+
+The environment `data.txt` files can contain:
+- API base URLs
+- Database connection strings
+- Environment-specific variables
+- Configuration parameters
 
 ## Outputs
 
@@ -192,6 +255,11 @@ If you configure the `SLACK_WEBHOOK_URL` secret, you'll receive:
 4. **Template errors**
    - Ensure `templates/ctrf-report.hbs` exists
    - Check Handlebars syntax in your template
+
+5. **Test environment issues**
+   - Test environments are optional - missing directories won't cause failures
+   - Ensure `test-environments` structure matches `test-data` structure
+   - Each environment case directory must have its own `data.txt` file
 
 ### Debug Mode
 
