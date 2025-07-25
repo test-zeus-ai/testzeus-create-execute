@@ -164,7 +164,7 @@ jobs:
     
     steps:
     - name: Run Smoke Tests
-      uses: your-username/testzeus-run-action@v1
+      uses: test-zeus-ai/testzeus-create-execute@v1
       env:
         TESTZEUS_EMAIL: ${{ secrets.TESTZEUS_EMAIL }}
         TESTZEUS_PASSWORD: ${{ secrets.TESTZEUS_PASSWORD }}
@@ -220,6 +220,71 @@ The action generates the following outputs:
 - **HTML Report**: Generated from the custom template
 - **Console Logs**: Detailed execution logs in GitHub Actions
 - **Slack Notifications**: Success/failure notifications (if configured)
+
+### CTRF Schema
+
+The generated CTRF report follows the **Common Test Report Format (CTRF) v1.0.0** specification. The schema includes:
+
+- **Report metadata**: Format version, specification version, and tool information
+- **Test summary**: Aggregate counts (total, passed, failed, pending, skipped, other) and execution timing
+- **Individual test results**: Each test includes:
+  - Test identification (name, status, duration, timing)
+  - Thread/execution context information
+  - File attachments (screenshots, logs, artifacts)
+  - Step-by-step execution details with individual step status
+  - Extended metadata (tenant IDs, test run identifiers, feature/scenario names)
+
+This standardized format ensures compatibility with CTRF-compliant tools and enables consistent test reporting across different testing frameworks.
+
+#### Schema Example
+
+```json
+{
+  "reportFormat": "CTRF",
+  "specVersion": "1.0.0",
+  "results": {
+    "tool": {
+      "name": "testzeus",
+      "version": "1.0.0"
+    },
+    "summary": {
+      "tests": 5,
+      "passed": 4,
+      "failed": 1,
+      "start": 1640995200,
+      "stop": 1640995800
+    },
+    "tests": [
+      {
+        "name": "Login Test",
+        "status": "pass",
+        "duration": 2500,
+        "steps": [
+          {
+            "name": "Enter credentials",
+            "status": "pass"
+          }
+        ],
+        "attachments": [
+          {
+            "name": "image.png",
+            "contentType": "png",
+            "path": "<path/to/image>.png"
+          }
+        ],
+        "extra": {
+          "tenantid": "abcd",
+          "test_run_id": "abcd",
+          "test_run_dash_id": "abcd",
+          "agent_config_id": "abcd",
+          "feature_name": "Authentication",
+          "scenario_name": "Login to google"
+        }
+      }
+    ]
+  }
+}
+```
 
 ## Slack Notifications
 
