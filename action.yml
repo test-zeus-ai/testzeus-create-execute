@@ -36,5 +36,5 @@ runs:
       shell: bash
       run: |
         echo "Creating test..."
-        chmod +x ./scripts/create_test_report.sh
-        ./scripts/create_test_report.sh
+        chmod +x "${{ github.action_path }}/scripts/create_test_report.sh"
+        "${{ github.action_path }}/scripts/create_test_report.sh"
