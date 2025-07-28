@@ -6,7 +6,6 @@ A composite GitHub Action that runs automated tests using TestZeus and generates
 
 - 🚀 Automated test execution using TestZeus CLI
 - 📊 CTRF (Common Test Report Format) report generation
-- 📱 Slack notifications for test results
 - 🔄 Support for multiple test cases and data files
 - 📎 Asset file upload support
 - 🌍 Environment configuration support for different test environments
@@ -22,7 +21,7 @@ your-repo/
 ├── tests/
 │   ├── test-example1/
 │   │   ├── example.feature          # Gherkin feature file
-│   │   ├── test-data/
+│   │   ├── test-data/               # Optional test data configurations
 │   │   │   ├── case1/
 │   │   │   │   ├── data.txt         # Test data file
 │   │   │   │   └── assets/          # Optional asset files
@@ -74,50 +73,70 @@ Configure these secrets in your GitHub repository (`Settings > Secrets and varia
 |--------|-------------|----------|
 | `TESTZEUS_EMAIL` | Your TestZeus account email | ✅ Yes |
 | `TESTZEUS_PASSWORD` | Your TestZeus account password | ✅ Yes |
-| `SLACK_WEBHOOK_URL` | Slack webhook URL for notifications | ❌ Optional |
 
 ### 2. Create CTRF Report Template (optional)
 
 ![Test Results Summary](assets/test-results-summary.png)
 
-Create `templates/ctrf-report.hbs` in your repository:
+Create `templates/ctrf-report.hbs` in your repository and copy this template in to ctrf-report.hbs file. This will render similar to above image:
+To create you own custom template then refer the following repos:
+- [build custom CTRF template using ctrf-io repo](https://github.com/ctrf-io/github-test-reporter/tree/v1/)
+- [Learn how to write handlebar for github actions](https://handlebarsjs.com/guide/)
 
 ```handlebars
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Test Report</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .pass { color: green; }
-        .fail { color: red; }
-        .summary { background: #f5f5f5; padding: 15px; border-radius: 5px; }
-    </style>
-</head>
-<body>
-    <h1>Test Execution Report</h1>
-    
-    <div class="summary">
-        <h2>Summary</h2>
-        <p><strong>Total Tests:</strong> {{results.summary.tests}}</p>
-        <p><strong>Passed:</strong> <span class="pass">{{results.summary.passed}}</span></p>
-        <p><strong>Failed:</strong> <span class="fail">{{results.summary.failed}}</span></p>
-        <p><strong>Duration:</strong> {{results.summary.stop}} ms</p>
-    </div>
-    
-    <h2>Test Results</h2>
-    {{#each results.tests}}
-    <div style="border: 1px solid #ddd; margin: 10px 0; padding: 10px;">
-        <h3>{{name}}</h3>
-        <p><strong>Status:</strong> <span class="{{status}}">{{status}}</span></p>
-        <p><strong>Duration:</strong> {{duration}} ms</p>
-        {{#if message}}
-        <p><strong>Message:</strong> {{message}}</p>
-        {{/if}}
-    </div>
+# 🧪 Test Results Summary
+
+| **Tests** | **Passed** | **Failed** | **Skipped** | **Other** | **Flaky** | **Duration** |
+|----------|------------|------------|-------------|-----------|-----------|--------------|
+| {{ctrf.summary.tests}} | {{ctrf.summary.passed}} | {{ctrf.summary.failed}} | {{add ctrf.summary.skipped ctrf.summary.pending}} | {{ctrf.summary.other}} | {{countFlaky ctrf.tests}} | {{formatDuration ctrf.summary.start ctrf.summary.stop}} |
+
+---
+
+## 📊 Overview
+- ✅ Passed: {{ctrf.summary.passed}} / {{ctrf.summary.tests}}
+- ❌ Failed: {{ctrf.summary.failed}}
+
+---
+
+## ⚙️ Execution Details
+{{#if ctrf.tool.name}}![tool](https://ctrf.io/assets/github/tools.svg) **Tool**: {{ctrf.tool.name}}{{/if}}  
+🔍 **Branch**: `{{github.branchName}}`  
+👤 **Triggered by**: `{{github.actor}}`
+
+---
+
+{{#if ctrf.summary.failed}}
+## ❌ Failed Tests
+
+{{#each ctrf.tests}}
+  {{#if (eq this.status "fail")}}
+  ### 🔴 {{this.extra.feature_name}} - {{this.extra.scenario_name}}
+  - ⏱️ Duration: {{formatDurationMs this.duration}}
+  - 🔗 TestZeus Run: [View](https://prod.testzeus.app/test-runs/{{this.extra.test_run_id}})
+  {{#if this.extra.test_data_id}}
+  - 🧾 Test Data: [View](https://prod.testzeus.app/test-data/{{this.extra.test_data_id.[0]}})
+  {{/if}}
+
+  {{#if (getCollapseLargeReports)}}
+  <details>
+    <summary><strong>View Steps</strong></summary>
+
+    {{#each this.steps}}
+    - {{#if (eq this.status "fail")}}❌{{else if (eq this.status "pass")}}✅{{/if}} {{this.name}}
     {{/each}}
-</body>
-</html>
+
+  </details>
+  {{else}}
+  - **Steps**:
+    {{#each this.steps}}
+    - {{#if (eq this.status "fail")}}❌{{else if (eq this.status "pass")}}✅{{/if}} {{this.name}}
+  {{/each}}
+  {{/if}}
+
+  {{/if}}
+{{/each}}
+
+{{/if}}
 ```
 
 ## Usage
@@ -138,12 +157,19 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Run TestZeus Tests
+    - name: Run Smoke Suite
       uses: test-zeus-ai/testzeus-create-execute@v1
-      env:
-        TESTZEUS_EMAIL: ${{ secrets.TESTZEUS_EMAIL }}
-        TESTZEUS_PASSWORD: ${{ secrets.TESTZEUS_PASSWORD }}
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+          email: ${{ secrets.TESTZEUS_EMAIL }}
+          password: ${{ secrets.TESTZEUS_PASSWORD }}
+        
+    - name: Publish Test Report
+      uses: ctrf-io/github-test-reporter@v1
+      with:
+        report-path: 'ctrf-report.json'
+        template-path: 'templates/testzeus-report.hbs'
+        custom-report: true
+      if: always()
 ```
 
 ### Advanced Usage with Custom Triggers
@@ -163,12 +189,19 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Run Smoke Tests
+    - name: Run Smoke Suite
       uses: test-zeus-ai/testzeus-create-execute@v1
-      env:
-        TESTZEUS_EMAIL: ${{ secrets.TESTZEUS_EMAIL }}
-        TESTZEUS_PASSWORD: ${{ secrets.TESTZEUS_PASSWORD }}
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+          email: ${{ secrets.TESTZEUS_EMAIL }}
+          password: ${{ secrets.TESTZEUS_PASSWORD }}
+        
+    - name: Publish Test Report
+      uses: ctrf-io/github-test-reporter@v1
+      with:
+        report-path: 'ctrf-report.json'
+        template-path: 'templates/testzeus-report.hbs'
+        custom-report: true
+      if: always()
 ```
 
 ## Test Environments
@@ -285,21 +318,6 @@ This standardized format ensures compatibility with CTRF-compliant tools and ena
   }
 }
 ```
-
-## Slack Notifications
-
-If you configure the `SLACK_WEBHOOK_URL` secret, you'll receive:
-
-- ✅ **Success notifications** with a link to the test run
-- ❌ **Failure notifications** with error details and run link
-
-### Setting up Slack Webhook
-
-1. Go to your Slack workspace
-2. Create a new Slack app or use an existing one
-3. Enable Incoming Webhooks
-4. Create a webhook URL for your channel
-5. Add the webhook URL as `SLACK_WEBHOOK_URL` secret in GitHub
 
 ## Troubleshooting
 

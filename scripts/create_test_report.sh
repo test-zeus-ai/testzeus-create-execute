@@ -18,7 +18,20 @@ for test_dir in ./tests/test-*; do
   ENV_PARENT_DIR="$test_dir/test-environments"
 
   if [[ ! -d "$DATA_PARENT_DIR" ]]; then
-    echo "❌ Skipping $TEST_NAME — test-data dir not found."
+    echo "ℹ️ No test-data directory found for $TEST_NAME — creating test with feature file only."
+    
+    echo "🧪 Creating test for $TEST_NAME (feature file only)..."
+    TEST_ID=$(testzeus --format json tests create --name "${TEST_NAME}-${SEED_ID}" --feature-file "$FEATURE_FILE" --status "ready" | jq -r '.id')
+
+    # Add test ID to comma-separated string
+    if [[ -z "$ALL_TEST_IDS" ]]; then
+      ALL_TEST_IDS="$TEST_ID"
+    else
+      ALL_TEST_IDS="$ALL_TEST_IDS,$TEST_ID"
+    fi
+
+    echo "✅ Test created: ${TEST_NAME} (ID: $TEST_ID)"
+    echo "--------------------------------------------"
     continue
   fi
 
