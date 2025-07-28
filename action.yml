@@ -23,7 +23,7 @@ runs:
       shell: bash
       run: |
         echo "🔐 Logging into TestZeus..."
-        LOGIN_OUTPUT=$(poetry run testzeus login --email "${{ inputs.email }}" --password "${{ inputs.password }}" 2>&1)
+        LOGIN_OUTPUT=$(testzeus login --email "${{ inputs.email }}" --password "${{ inputs.password }}" 2>&1)
 
         if echo "$LOGIN_OUTPUT" | grep -q "Login failed"; then
           echo "❌ Login failed: aborting action."
