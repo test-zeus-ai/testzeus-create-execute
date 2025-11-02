@@ -2,7 +2,7 @@
 
 | **Tests** | **Passed** | **Failed** | **Skipped** | **Other** | **Flaky** | **Duration** |
 |----------|------------|------------|-------------|-----------|-----------|--------------|
-| {{ctrf.summary.tests}} | {{ctrf.summary.passed}} | {{ctrf.summary.failed}} | {{add ctrf.summary.skipped ctrf.summary.pending}} | {{ctrf.summary.other}} | {{countFlaky ctrf.tests}} | {{formatDuration ctrf.summary.start ctrf.summary.stop}} |
+| {{ctrf.summary.tests}} | {{ctrf.summary.passed}} | {{ctrf.summary.failed}} | {{add ctrf.summary.skipped ctrf.summary.pending}} | {{ctrf.summary.other}} | {{countFlaky ctrf.tests}} | {{formatDurationMs ctrf.summary.duration}} |
 
 ---
 
@@ -18,32 +18,68 @@
 👤 **Triggered by**: `{{github.actor}}`
 
 ---
+{{#if ctrf.summary.passed}}
+## ✅ Passed Tests
+{{#each ctrf.tests}}
+  {{#if (eq this.status "passed")}}
+  ### 🟢 {{this.name}}
+  - ⏱️ Duration: {{formatDurationMs this.duration}}
+  - 🔍 Execution Mode: {{this.extra.execution_mode}}
+  - 📂 Artifacts: {{#if this.attachments}} {{length this.attachments}} {{else}} No attachments {{/if}}
+  - 🔗 Test Run: [View](https://prod.testzeus.app/test-runs/{{this.extra.test_run_id}})
+  {{#if this.extra.test_data_id}}
+  - 🧾 Test Datas:
+  {{#each this.extra.test_data_id}}
+        [View](https://prod.testzeus.app/test-data/{{this}}){{#unless @last}}, {{/unless}}
+  {{/each}}
+  {{/if}}
+  {{#if this.extra.environment}}
+  {{#each this.extra.environment}}
+  - 🌐 Environment: [View](https://prod.testzeus.app/test-environments/{{this}})
+  {{/each}}
+  {{/if}}
+  - 📄 Test Report: [View](https://prod.testzeus.app/reports/{{this.extra.test_report_run_id}})
+  {{/if}}
+{{/each}}
+{{/if}}
+
 
 {{#if ctrf.summary.failed}}
 ## ❌ Failed Tests
 
 {{#each ctrf.tests}}
-  {{#if (eq this.status "fail")}}
-  ### 🔴 {{this.extra.feature_name}} - {{this.extra.scenario_name}}
+  {{#if (eq this.status "failed")}}
+  ### 🔴 {{this.name}}
   - ⏱️ Duration: {{formatDurationMs this.duration}}
-  - 🔗 TestZeus Run: [View](https://prod.testzeus.app/test-runs/{{this.extra.test_run_id}})
+  - 🔍 Execution Mode: {{this.extra.execution_mode}}
+  - 📂 Artifacts: {{#if this.attachments}} {{length this.attachments}} {{else}} No attachments {{/if}}
+  - 🔗 Test Run: [View](https://prod.testzeus.app/test-runs/{{this.extra.test_run_id}})
   {{#if this.extra.test_data_id}}
-  - 🧾 Test Data: [View](https://prod.testzeus.app/test-data/{{this.extra.test_data_id.[0]}})
+  - 🧾 Test Datas:
+  {{#each this.extra.test_data_id}}
+        [View](https://prod.testzeus.app/test-data/{{this}}){{#unless @last}}, {{/unless}}
+  {{/each}}
   {{/if}}
+  {{#if this.extra.environment}}
+  {{#each this.extra.environment}}
+  - 🌐 Environment: [View](https://prod.testzeus.app/test-environments/{{this}})
+  {{/each}}
+  {{/if}}
+  - 📄 Test Report: [View](https://prod.testzeus.app/reports/{{this.extra.test_report_run_id}})
 
   {{#if (getCollapseLargeReports)}}
   <details>
     <summary><strong>View Steps</strong></summary>
 
     {{#each this.steps}}
-    - {{#if (eq this.status "fail")}}❌{{else if (eq this.status "pass")}}✅{{/if}} {{this.name}}
+    - {{#if (eq this.status "failed")}}❌{{else if (eq this.status "passed")}}✅{{/if}} {{this.name}}
     {{/each}}
 
   </details>
   {{else}}
   - **Steps**:
     {{#each this.steps}}
-    - {{#if (eq this.status "fail")}}❌{{else if (eq this.status "pass")}}✅{{/if}} {{this.name}}
+    - {{#if (eq this.status "failed")}}❌{{else if (eq this.status "passed")}}✅{{/if}} {{this.name}}
   {{/each}}
   {{/if}}
 
