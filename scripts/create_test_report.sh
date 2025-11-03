@@ -142,4 +142,4 @@ echo "Test IDs: $ALL_TEST_IDS"
 # Run test-run-group and generate CTRF report
 echo ""
 echo "Running test-run-group and generating CTRF report..."
-testzeus --format json test-run-group execute-and-monitor --name "$TEST_RUN_NAME" --test-ids "$ALL_TEST_IDS" --execution-mode "$EXECUTION_MODE" --interval 30 --filename "$REPORT_FILENAME" 
+testzeus test-run-group execute-and-monitor --name "$TEST_RUN_NAME" --test-ids "$ALL_TEST_IDS" --execution-mode "$EXECUTION_MODE" --interval 60 --filename "$REPORT_FILENAME" --output-dir '.'
