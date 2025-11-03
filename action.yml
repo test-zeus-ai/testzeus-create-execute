@@ -22,14 +22,18 @@ inputs:
     description: 'Filename for the CTRF report output'
     required: false
     default: 'ctrf-report.json'
-
+  notification_channels:
+    description: 'Notification channels ids for the test run eg: "1234567890,1234567891"'
+    required: false
+    default: ''
+  
 runs:
   using: 'composite'
   steps:
     - name: Install dependencies  
       shell: bash
       run: |
-        pip install --upgrade testzeus-cli jq
+        pip install --upgrade testzeus-cli jq python-dateutil
 
     - name: Login to TestZeus
       shell: bash
@@ -52,4 +56,5 @@ runs:
         export TEST_RUN_NAME="${{ inputs.name }}"
         export EXECUTION_MODE="${{ inputs.execution_mode }}"
         export REPORT_FILENAME="${{ inputs.filename }}"
+        export NOTIFICATION_CHANNELS="${{ inputs.notification_channels }}"
         "${{ github.action_path }}/scripts/create_test_report.sh"
