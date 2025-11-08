@@ -139,6 +139,14 @@ echo ""
 echo "🎉 All tests created successfully!"
 echo "Test IDs: $ALL_TEST_IDS"
 
+# Replace asset file references in feature text with actual supporting files
+if [[ -n "$ALL_TEST_IDS" ]]; then
+  echo ""
+  echo "🔄 Updating feature asset references..."
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  "$SCRIPT_DIR/file_name_replacement.sh" "$ALL_TEST_IDS"
+fi
+
 # Run test-run-group and generate CTRF report
 echo ""
 echo "Running test-run-group and generating CTRF report..."
