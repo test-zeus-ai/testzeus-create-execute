@@ -12,33 +12,43 @@ permissions:
 jobs:
   install-lint-build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install Poetry
+      - name: Upgrade pip
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install poetry
+          python -m pip install --upgrade pip setuptools wheel build
 
-      - name: Configure Poetry
-        run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
-
+      # If you have requirements.txt
       - name: Install dependencies
-        run: poetry install
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      # If you rely on pyproject dependencies instead
+      - name: Install project (editable)
+        run: |
+          pip install -e .
+
+      - name: Install linting tools
+        run: |
+          pip install ruff
 
       - name: Run linting
         run: |
-          poetry run ruff check . || true
-          poetry run ruff format --check . || true
+          ruff check . || true
+          ruff format --check . || true
 
       - name: Build package
-        run: poetry build
+        run: |
+          python -m build
