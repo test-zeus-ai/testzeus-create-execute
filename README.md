@@ -19,12 +19,16 @@ Your repository must follow this structure:
 ```
 your-repo/
 ├── tests/
-│   ├── test-environment/            # Global test environment (optional)
-│   │   ├── data.txt                 # Global environment configuration
-│   │   └── assets/                  # Optional global environment assets
-│   │       └── config.json
 │   ├── test-login/
 │   │   ├── login.feature            # Gherkin feature file
+│   │   ├── environment/             # Optional per-test environment
+│   │   │   ├── data.txt             # Environment configuration
+│   │   │   ├── extra.json           # Optional extra fields (e.g., connected_env)
+│   │   │   └── assets/              # Optional environment assets
+│   │   │       └── config.json
+│   │   ├── hypermind/               # Optional Hypermind code blocks
+│   │   │   ├── helper.py            # Code block file 1
+│   │   │   └── utils.js             # Code block file 2
 │   │   └── test-data/               # Optional test data configurations
 │   │       ├── valid-user/          # Test case 1
 │   │       │   ├── data.txt         # Test data file
@@ -37,13 +41,18 @@ your-repo/
 │   │           └── data.txt
 │   ├── test-checkout/
 │   │   ├── checkout.feature
+│   │   ├── environment/
+│   │   │   ├── data.txt
+│   │   │   └── extra.json           # {"connected_env": "env-id-123"}
 │   │   └── test-data/
 │   │       ├── single-item/         # Multiple cases assigned to one test
 │   │       │   └── data.txt
 │   │       └── multiple-items/
 │   │           └── data.txt
 │   └── test-search/
-│       └── search.feature           # Test without test-data (feature file only)
+│       ├── search.feature           # Test without test-data (feature file only)
+│       └── hypermind/               # Optional Hypermind code blocks
+│           └── search-helper.py
 └── templates/
     └── ctrf-report.hbs              # Custom CTRF report template (optional)
 ```
@@ -58,21 +67,34 @@ your-repo/
 
 ### Optional Files
 
-4. **Global Environment File**: A single `tests/test-environment/data.txt` file for global environment configuration
-   - This environment configuration is shared across all tests
-   - Contains global settings like API endpoints, authentication tokens, or configuration parameters
-   - Supports assets in the `tests/test-environment/assets/` directory
-   - If present, will be automatically associated with all created tests
+4. **Per-Test Environment**: Each test can have its own `environment/` directory
+   - Contains `data.txt` for environment configuration specific to that test
+   - Supports `extra.json` for additional fields like connected environments
+   - Supports assets in `environment/assets/` directory
+   
+5. **Hypermind Code Blocks**: Each test can have a `hypermind/` directory
+   - Contains code files that will be uploaded as Hypermind code blocks
+   - Each file in the directory becomes a separate code block
+   - Automatically linked to the test via `--hypermind-code-blocks` parameter
 
 ## Test Creation Logic
 
 The action follows this logic for creating tests:
 
-### 1. **Global Environment** (Optional)
-- If `tests/test-environment/` exists, creates one global environment record
-- This environment is shared across all tests
+### 1. **Per-Test Environment** (Optional)
+- Each test can have its own `environment/` directory with specific configuration
+- Environment supports:
+  - `data.txt`: Environment configuration data
+  - `extra.json`: Additional fields (e.g., `{"connected_env": "env-id-123"}`)
+  - `assets/`: Environment-specific files
+- The `connected_env` field in `extra.json` is used to link to other environments via the `--connected-environments` parameter
 
-### 2. **Test Creation Per Directory**
+### 2. **Hypermind Code Blocks** (Optional)
+- Each test can have a `hypermind/` directory containing code files
+- All files in this directory are uploaded as separate Hypermind code blocks
+- Code blocks are automatically linked to the test via the `--hypermind-code-blocks` parameter
+
+### 3. **Test Creation Per Directory**
 For each `tests/test-*` directory:
 
 - **Feature File Only**: If no `test-data/` directory exists, creates a test with just the feature file
@@ -80,18 +102,30 @@ For each `tests/test-*` directory:
   1. Creates individual test-data records for each case directory
   2. Collects all test-data IDs from that test
   3. Creates a single test record with ALL test-data IDs assigned
-  4. Associates the global environment (if exists)
+  4. Associates the per-test environment (if exists)
+  5. Links Hypermind code blocks (if exist)
 
-### 3. **Example Test Creation**
+### 4. **Example Test Creation**
 ```
 test-login/
 ├── login.feature
+├── environment/
+│   ├── data.txt                    # Environment config
+│   ├── extra.json                  # {"connected_env": "other-env-id"}
+│   └── assets/
+│       └── cert.pem
+├── hypermind/
+│   ├── helper.py                   → Creates Hypermind block: hyper_001
+│   └── utils.js                    →   (both files in single block)
 └── test-data/
-    ├── valid-user/data.txt     → Creates test-data ID: data_001
-    ├── admin-user/data.txt     → Creates test-data ID: data_002  
-    └── guest-user/data.txt     → Creates test-data ID: data_003
+    ├── valid-user/data.txt         → Creates test-data ID: data_001
+    ├── admin-user/data.txt         → Creates test-data ID: data_002  
+    └── guest-user/data.txt         → Creates test-data ID: data_003
 
-Result: One test record with data: "data_001,data_002,data_003"
+Result: One test record with:
+  - data: "data_001,data_002,data_003"
+  - environment: env_001 (with connected environment linked)
+  - hypermind-code-blocks: "hyper_001" (contains both files)
 ```
 
 ## Setup
@@ -300,55 +334,319 @@ jobs:
         execution_mode: 'strict'
 ```
 
-## Global Test Environment
+## Per-Test Environment Configuration
 
-The action supports an optional global test environment configuration that applies to all tests in your repository.
+The action supports optional per-test environment configuration, allowing each test to have its own isolated environment settings.
 
-### How Global Test Environment Works
+### How Per-Test Environments Work
 
-1. **Single Location**: Place environment configuration in `tests/test-environment/` directory
-2. **Global Scope**: The same environment configuration is applied to all tests
-3. **Automatic Association**: When present, the global environment is automatically linked to every test
-4. **Optional**: The global test environment is completely optional - tests work without it
+1. **Test-Specific**: Each test directory can contain its own `environment/` directory
+2. **Isolated Configuration**: Each environment is independent and specific to one test
+3. **Automatic Association**: The environment is automatically linked to its corresponding test
+4. **Optional**: Per-test environments are completely optional - tests work without them
+
+### Environment Structure
+
+```
+tests/test-login/
+├── login.feature
+└── environment/
+    ├── data.txt              # Environment configuration
+    ├── extra.json            # Optional extra fields
+    └── assets/               # Optional environment assets
+        ├── api-cert.pem
+        └── config.json
+```
+
+### extra.json Format
+
+The `extra.json` file allows you to specify additional environment properties:
+
+```json
+{
+  "connected_env": "environment-id-or-name-123"
+}
+```
+
+**Fields:**
+- `connected_env`: ID or name of another environment to link via the `--connected-environments` parameter
+- Additional custom fields can be added as needed
 
 ### Example Use Cases
 
-- **API Base URLs** for different environments (staging, production)
-- **Authentication Tokens** or credentials shared across all tests
-- **Global Configuration** settings or feature flags
-- **Environment-specific Assets** like certificates or config files
-- **Database Connection Strings** for test environments
+- **Test-Specific URLs**: Different API endpoints for different test suites
+- **Authentication Credentials**: Separate credentials per test type
+- **Environment Links**: Connect staging/production environments using `connected_env`
+- **Feature Flags**: Test-specific feature configurations
+- **Database Configs**: Per-test database connection strings
+- **Certificates**: Test-specific SSL/TLS certificates
 
-### Sample Global Environment Structure
+### Connected Environments
+
+Use the `connected_env` field in `extra.json` to link environments together:
+
+```json
+{
+  "connected_env": "prod-env-id"
+}
+```
+
+This automatically calls:
+```bash
+testzeus environments update <env-id> --connected-environments "prod-env-id"
+```
+
+### Sample Structure with Multiple Tests
 
 ```
 tests/
-├── test-environment/
-│   ├── data.txt              # Global environment config
-│   └── assets/
-│       ├── api-cert.pem
-│       ├── config.json
-│       └── auth-token.txt
 ├── test-login/
 │   ├── login.feature
+│   ├── environment/
+│   │   ├── data.txt          # Login-specific environment
+│   │   ├── extra.json        # {"connected_env": "base-env-id"}
+│   │   └── assets/
+│   │       └── auth-cert.pem
 │   └── test-data/
 │       └── valid-user/
 │           └── data.txt
-└── test-checkout/
-    ├── checkout.feature
-    └── test-data/
-        ├── guest-checkout/
-        │   └── data.txt
-        └── member-checkout/
-            └── data.txt
+├── test-checkout/
+│   ├── checkout.feature
+│   ├── environment/
+│   │   ├── data.txt          # Checkout-specific environment
+│   │   └── assets/
+│   │       └── payment-config.json
+│   └── test-data/
+│       ├── guest-checkout/
+│       │   └── data.txt
+│       └── member-checkout/
+│           └── data.txt
+└── test-admin/
+    ├── admin.feature
+    └── environment/
+        ├── data.txt          # Admin-specific environment
+        └── extra.json        # {"connected_env": "admin-base-env"}
 ```
 
-The global environment `data.txt` file can contain:
-- API base URLs and endpoints
-- Authentication tokens or API keys
+Each test's `environment/data.txt` file can contain:
+- Test-specific API endpoints
+- Authentication tokens or credentials
 - Environment-specific variables
-- Global configuration parameters
+- Configuration parameters unique to that test
 - Database connection strings
+
+## Hypermind Code Blocks
+
+The action supports Hypermind code blocks, allowing you to attach reusable code snippets, helper functions, or utilities to your tests.
+
+### How Hypermind Code Blocks Work
+
+1. **Per-Test Directory**: Each test can have a `hypermind/` directory containing code files
+2. **Single Code Block**: All files in the directory are uploaded together as one code block
+3. **Automatic Linking**: The code block is automatically associated with the test via `--hypermind-code-blocks`
+4. **Optional**: Hypermind directories are completely optional - tests work without them
+
+### Hypermind Structure
+
+```
+tests/test-login/
+├── login.feature
+└── hypermind/
+    ├── helper.py             # Python helper functions
+    ├── utils.js              # JavaScript utilities
+    └── config.yaml           # Configuration code
+```
+
+### Example Use Cases
+
+- **Helper Functions**: Reusable code for data manipulation or validation
+- **API Clients**: Custom API interaction code
+- **Data Generators**: Functions to generate test data
+- **Utilities**: Common utilities shared across test steps
+- **Configuration Code**: Programmatic configuration setup
+- **Parsers**: Custom parsers for test data or responses
+
+### How It Works
+
+When the action runs:
+1. Scans the `hypermind/` directory for all files
+2. Creates a single Hypermind code block with all files using:
+   ```bash
+   testzeus hypermind-code-blocks create --name "test-name-timestamp" --status "ready" --file "path/to/file1" --file "path/to/file2" ...
+   ```
+3. Associates it with the test via:
+   ```bash
+   testzeus tests create ... --hypermind-code-blocks "id"
+   ```
+
+### Sample Structure with Hypermind
+
+```
+tests/
+├── test-login/
+│   ├── login.feature
+│   ├── hypermind/
+│   │   ├── auth-helper.py        # Authentication utilities
+│   │   └── token-validator.js    # Token validation logic
+│   └── test-data/
+│       └── valid-user/
+│           └── data.txt
+├── test-checkout/
+│   ├── checkout.feature
+│   ├── hypermind/
+│   │   ├── payment-processor.py  # Payment processing code
+│   │   ├── cart-utils.js         # Shopping cart utilities
+│   │   └── discount-calc.py      # Discount calculation logic
+│   └── test-data/
+│       └── single-item/
+│           └── data.txt
+└── test-search/
+    ├── search.feature
+    └── hypermind/
+        └── search-algorithm.py    # Custom search logic
+```
+
+### Supported File Types
+
+Hypermind code blocks support any text-based file format:
+- Python (`.py`)
+- JavaScript (`.js`)
+- TypeScript (`.ts`)
+- YAML/JSON configuration files
+- Shell scripts (`.sh`)
+- Any other text-based code files
+
+## Complete Example: All Features Combined
+
+Here's a comprehensive example showing how to use environments, Hypermind code blocks, and test data together:
+
+```
+your-repo/
+├── tests/
+│   ├── test-api-authentication/
+│   │   ├── authentication.feature              # Feature file
+│   │   ├── environment/
+│   │   │   ├── data.txt                        # API base URLs, auth endpoints
+│   │   │   ├── extra.json                      # {"connected_env": "base-api-env"}
+│   │   │   └── assets/
+│   │   │       ├── api-certificate.pem         # SSL certificate
+│   │   │       └── oauth-config.json           # OAuth configuration
+│   │   ├── hypermind/
+│   │   │   ├── jwt-helper.py                   # JWT token utilities
+│   │   │   ├── auth-validator.js               # Authentication validation
+│   │   │   └── token-refresh.py                # Token refresh logic
+│   │   └── test-data/
+│   │       ├── admin-login/
+│   │       │   ├── data.txt                    # Admin credentials
+│   │       │   └── assets/
+│   │       │       └── admin-profile.json
+│   │       ├── user-login/
+│   │       │   └── data.txt                    # Regular user credentials
+│   │       └── guest-access/
+│   │           └── data.txt                    # Guest access token
+│   │
+│   ├── test-payment-processing/
+│   │   ├── payment.feature
+│   │   ├── environment/
+│   │   │   ├── data.txt                        # Payment gateway URLs
+│   │   │   ├── extra.json                      # {"connected_env": "prod-payment-env"}
+│   │   │   └── assets/
+│   │   │       └── payment-gateway-cert.pem
+│   │   ├── hypermind/
+│   │   │   ├── payment-calculator.py           # Payment calculations
+│   │   │   ├── tax-engine.js                   # Tax calculation logic
+│   │   │   └── currency-converter.py           # Currency conversion
+│   │   └── test-data/
+│   │       ├── credit-card-payment/
+│   │       │   ├── data.txt
+│   │       │   └── assets/
+│   │       │       └── card-details.json
+│   │       ├── paypal-payment/
+│   │       │   └── data.txt
+│   │       └── crypto-payment/
+│   │           └── data.txt
+│   │
+│   └── test-simple-search/
+│       ├── search.feature                      # Simple test with no test-data
+│       ├── environment/
+│       │   └── data.txt                        # Search API configuration
+│       └── hypermind/
+│           └── search-ranker.py                # Search ranking algorithm
+│
+└── templates/
+    └── ctrf-report.hbs
+```
+
+### What Happens During Execution
+
+For `test-api-authentication`:
+
+1. **Environment Creation**:
+   ```bash
+   testzeus environments create --name "test-api-authentication-env-1234567890" \
+     --data-file "./tests/test-api-authentication/environment/data.txt" \
+     --status "ready"
+   # Returns: env_001
+   ```
+
+2. **Connected Environment Linking**:
+   ```bash
+   testzeus environments update env_001 \
+     --connected-environments "base-api-env"
+   ```
+
+3. **Environment Assets Upload**:
+   ```bash
+   testzeus environments upload-file env_001 \
+     "./tests/test-api-authentication/environment/assets/api-certificate.pem"
+   testzeus environments upload-file env_001 \
+     "./tests/test-api-authentication/environment/assets/oauth-config.json"
+   ```
+
+4. **Hypermind Code Blocks Creation**:
+   ```bash
+   testzeus hypermind-code-blocks create \
+     --name "test-api-authentication-1234567890" \
+     --status "ready" \
+     --file "./tests/test-api-authentication/hypermind/jwt-helper.py" \
+     --file "./tests/test-api-authentication/hypermind/auth-validator.js" \
+     --file "./tests/test-api-authentication/hypermind/token-refresh.py"
+   # Returns: hyper_001
+   ```
+
+5. **Test Data Creation**:
+   ```bash
+   testzeus test-data create \
+     --name "test-api-authentication-admin-login-1234567890" \
+     --data-file "./tests/test-api-authentication/test-data/admin-login/data.txt" \
+     --status "ready"
+   # Returns: data_001
+   
+   testzeus test-data upload-file data_001 \
+     "./tests/test-api-authentication/test-data/admin-login/assets/admin-profile.json"
+   
+   # Similar for user-login (data_002) and guest-access (data_003)
+   ```
+
+6. **Test Creation with All Components**:
+   ```bash
+   testzeus tests create \
+     --name "test-api-authentication-1234567890" \
+     --feature-file "./tests/test-api-authentication/authentication.feature" \
+     --data "data_001,data_002,data_003" \
+     --environment "env_001" \
+     --hypermind-code-blocks "hyper_001" \
+     --status "ready"
+   # Returns: test_001
+   ```
+
+### Key Benefits of This Structure
+
+1. **Isolation**: Each test has its own environment configuration
+2. **Reusability**: Hypermind code blocks provide shared logic
+3. **Flexibility**: Connect related environments via `connected_env`
+4. **Organization**: Clear separation of concerns (environment, code, data)
+5. **Scalability**: Easy to add new tests without affecting existing ones
 
 ## Outputs
 
@@ -439,8 +737,8 @@ This standardized format ensures compatibility with CTRF-compliant tools and ena
    - Check file naming and extensions
 
 2. **"test-data dir not found"**
-   - Verify the `test-data` directory structure
-   - Each test must have a `test-data` subdirectory
+   - This is optional - tests can run with just a feature file
+   - Verify the `test-data` directory structure if you want to use test data
 
 3. **"Login failed"**
    - Check your TestZeus credentials in secrets
@@ -450,11 +748,18 @@ This standardized format ensures compatibility with CTRF-compliant tools and ena
    - Ensure `templates/ctrf-report.hbs` exists
    - Check Handlebars syntax in your template
 
-5. **Test environment issues**
-   - Global test environment is optional - missing directory won't cause failures
-   - Ensure `tests/test-environment/data.txt` exists if you create the directory
-   - Global environment assets are stored in `tests/test-environment/assets/`
-   - The same environment configuration applies to all tests
+5. **Per-test environment issues**
+   - Per-test environments are optional - missing directory won't cause failures
+   - Ensure `environment/data.txt` exists if you create the `environment/` directory
+   - Validate `extra.json` syntax if using connected environments
+   - Environment assets are stored in `environment/assets/`
+   - Each test can have its own independent environment configuration
+
+6. **Hypermind code block issues**
+   - Hypermind directories are optional - missing directory won't cause failures
+   - All files in the `hypermind/` directory will be uploaded as separate code blocks
+   - Check that code files are readable and not binary
+   - Verify file permissions if upload fails
 
 ### Debug Mode
 
