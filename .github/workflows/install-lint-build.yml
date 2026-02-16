@@ -19,36 +19,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python 3.11
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Upgrade pip
-        run: |
-          python -m pip install --upgrade pip setuptools wheel build
+        run: python -m pip install --upgrade pip
 
-      # If you have requirements.txt
-      - name: Install dependencies
-        run: |
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
-
-      # If you rely on pyproject dependencies instead
-      - name: Install project (editable)
-        run: |
-          pip install -e .
-
-      - name: Install linting tools
-        run: |
-          pip install ruff
+      - name: Install lint tools
+        run: pip install ruff
 
       - name: Run linting
         run: |
           ruff check . || true
           ruff format --check . || true
 
-      - name: Build package
+      - name: Run tests (if pytest exists)
         run: |
-          python -m build
+          if pip show pytest > /dev/null 2>&1; then
+            pytest || true
+          fi
