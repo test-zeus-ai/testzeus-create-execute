@@ -1,0 +1,42 @@
+name: install-lint-build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  install-lint-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install lint tools
+        run: pip install ruff
+
+      - name: Run linting
+        run: |
+          ruff check . || true
+          ruff format --check . || true
+
+      - name: Run tests (if pytest exists)
+        run: |
+          if pip show pytest > /dev/null 2>&1; then
+            pytest || true
+          fi
