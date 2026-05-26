@@ -81,7 +81,7 @@ get_environment_files() {
   local env_id="$1"
   echo "  🌍 Fetching supporting files for environment: $env_id" >&2
   
-  local env_json=$(testzeus --format json environment get "$env_id" 2>/dev/null)
+  local env_json=$(testzeus --format json environments get "$env_id" 2>/dev/null)
   
   if [[ -z "$env_json" ]]; then
     echo "  ⚠️  Warning: Could not fetch environment $env_id" >&2
