@@ -1,14 +1,25 @@
-# TestZeus Run Action
+# TestZeus Create & Execute
 
-A composite GitHub Action that runs automated tests using TestZeus and generates comprehensive test reports with Slack notifications.
+CI packaging that creates TestZeus tests from a `./tests` folder, runs them via the TestZeus CLI, and emits a CTRF report.
+
+**Supported CI systems**
+
+| CI | Packaging | How to run |
+|----|-----------|------------|
+| GitHub Actions | Composite Action (`action.yml`) | `uses: test-zeus-ai/testzeus-create-execute@v1` |
+| GitLab CI | Include / CI Component | [`templates/gitlab-ci.yml`](templates/gitlab-ci.yml) or [`templates/create-execute/`](templates/create-execute/) |
+| Bitbucket Pipelines | Pipeline snippet / Pipe | [`templates/bitbucket-pipelines.yml`](templates/bitbucket-pipelines.yml) or [`bitbucket-pipe/`](bitbucket-pipe/) |
+
+All platforms share the same orchestrator: [`scripts/entrypoint.sh`](scripts/entrypoint.sh) → [`scripts/create_test_report.sh`](scripts/create_test_report.sh).
 
 ## Features
 
-- 🚀 Automated test execution using TestZeus CLI
-- 📊 CTRF (Common Test Report Format) report generation
-- 🔄 Support for multiple test cases and data files
-- 📎 Asset file upload support
-- 🌍 Environment configuration support for different test environments
+- Automated test execution using TestZeus CLI
+- CTRF (Common Test Report Format) report generation
+- Support for multiple test cases and data files
+- Asset file upload support
+- Environment configuration support for different test environments
+- Same `./tests` layout on GitHub, GitLab, and Bitbucket
 
 ## Prerequisites
 
@@ -136,8 +147,11 @@ Configure these secrets in your GitHub repository (`Settings > Secrets and varia
 
 | Secret | Description | Required |
 |--------|-------------|----------|
-| `TESTZEUS_EMAIL` | Your TestZeus account email | ✅ Yes |
-| `TESTZEUS_PASSWORD` | Your TestZeus account password | ✅ Yes |
+| `TESTZEUS_TOKEN` | PocketBase JWT from TestZeus (preferred) | Preferred |
+| `TESTZEUS_EMAIL` | TestZeus account email | Fallback if no token |
+| `TESTZEUS_PASSWORD` | TestZeus account password | Fallback if no token |
+
+Provide **either** `TESTZEUS_TOKEN` **or** both email and password.
 
 ## Inputs
 
@@ -145,11 +159,13 @@ The action accepts the following input parameters:
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `email` | TestZeus login email | ✅ Yes | - |
-| `password` | TestZeus login password | ✅ Yes | - |
-| `name` | Name for the test run group | ❌ No | `Smoke action suite` |
-| `execution_mode` | Execution mode for the test run (`lenient` or `strict`) | ❌ No | `lenient` |
-| `filename` | Filename for the CTRF report output | ❌ No | `ctrf-report.json` |
+| `token` | TestZeus PocketBase JWT (preferred) | Preferred | — |
+| `email` | TestZeus login email (fallback) | Fallback | — |
+| `password` | TestZeus login password (fallback) | Fallback | — |
+| `name` | Name for the test run group | No | `Smoke action suite` |
+| `execution_mode` | Execution mode (`lenient` or `strict`) | No | `lenient` |
+| `filename` | CTRF report filename | No | `ctrf-report.json` |
+| `notification_channels` | Comma-separated channel IDs | No | — |
 
 ### Execution Modes
 
@@ -221,9 +237,55 @@ To create you own custom template then refer the following repos:
 {{/if}}
 ```
 
+## Shared environment variables
+
+Adapters map CI secrets/inputs into these env vars before calling `scripts/entrypoint.sh`:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `TESTZEUS_TOKEN` | Preferred | — | PocketBase JWT; uses CLI `session-exchange` |
+| `TESTZEUS_EMAIL` | Fallback | — | Login email when token is unset |
+| `TESTZEUS_PASSWORD` | Fallback | — | Login password when token is unset |
+| `TEST_RUN_NAME` | No | `Smoke action suite` | Test run group name |
+| `EXECUTION_MODE` | No | `lenient` | `lenient` or `strict` |
+| `REPORT_FILENAME` | No | `ctrf-report.json` | CTRF output filename |
+| `NOTIFICATION_CHANNELS` | No | _(empty)_ | Comma-separated channel IDs |
+| `TESTZEUS_SKIP_INSTALL` | No | _(unset)_ | Set `true` to skip `pip install` (Bitbucket Pipe image) |
+| `TESTZEUS_PROFILE` | No | `ci` | CLI profile name used for token auth |
+
+The runner must have `bash`, `pip`/`python`, and the `jq` binary available.
+
+## Versioning
+
+Pin consumers to a release tag, not `main`:
+
+| Consumer | Pin |
+|----------|-----|
+| GitHub Action | `uses: test-zeus-ai/testzeus-create-execute@v1` |
+| GitLab / Bitbucket clone | `TESTZEUS_ACTION_REF=v1` (default in templates) |
+| Bitbucket Pipe image | `ghcr.io/test-zeus-ai/testzeus-create-execute:v1` |
+
+Maintainers: push a semver tag (`v1.2.3`). The `release` workflow publishes the GHCR image and a GitHub Release. Move the floating `v1` tag to the latest compatible release when shipping.
+
+## Self-test
+
+This repo includes [`examples/smoke/`](examples/smoke/) and a `workflow_dispatch` workflow [`.github/workflows/self-test.yml`](.github/workflows/self-test.yml).
+
+1. Add repo secrets: `TESTZEUS_TOKEN` (or email/password)
+2. Actions → **self-test** → Run workflow
+3. Download the CTRF artifact from the run
+
+Locally:
+
+```bash
+ln -sfn examples/smoke/tests tests
+export TESTZEUS_TOKEN='...'
+./scripts/entrypoint.sh
+```
+
 ## Usage
 
-### Basic Usage
+### GitHub Actions — Basic Usage
 
 ```yaml
 name: Run TestZeus Tests
@@ -242,8 +304,10 @@ jobs:
     - name: Run Smoke Suite
       uses: test-zeus-ai/testzeus-create-execute@v1
       with:
-        email: ${{ secrets.TESTZEUS_EMAIL }}
-        password: ${{ secrets.TESTZEUS_PASSWORD }}
+        token: ${{ secrets.TESTZEUS_TOKEN }}
+        # Or fallback:
+        # email: ${{ secrets.TESTZEUS_EMAIL }}
+        # password: ${{ secrets.TESTZEUS_PASSWORD }}
         name: 'CI Smoke Tests'
         execution_mode: 'lenient'
         filename: 'test-results.json'
@@ -255,6 +319,82 @@ jobs:
         template-path: 'templates/testzeus-report.hbs'
         custom-report: true
       if: always()
+```
+
+### GitLab CI
+
+Set masked `TESTZEUS_TOKEN` (preferred) or `TESTZEUS_EMAIL` + `TESTZEUS_PASSWORD`.
+
+**Include (remote template, pinned to `v1`):**
+
+```yaml
+include:
+  - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
+
+variables:
+  TEST_RUN_NAME: "CI Smoke Tests"
+  EXECUTION_MODE: "lenient"
+  REPORT_FILENAME: "ctrf-report.json"
+```
+
+**CI/CD Component** (when published / vendored):
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/test-zeus-ai/testzeus-create-execute/create-execute@v1
+    inputs:
+      name: "CI Smoke Tests"
+      execution_mode: "lenient"
+      filename: "ctrf-report.json"
+      action_ref: "v1"
+```
+
+The job clones this repository at `TESTZEUS_ACTION_REF` (default `v1`), runs `scripts/entrypoint.sh`, and uploads the CTRF file as a job artifact. Pretty MR comments are not included — use artifacts / a GitLab report parser rather than `ctrf-io/github-test-reporter`.
+
+See [`templates/gitlab-ci.yml`](templates/gitlab-ci.yml) and [`templates/create-execute/template.yml`](templates/create-execute/template.yml).
+
+### Bitbucket Pipelines
+
+Set secured `TESTZEUS_TOKEN` (preferred) or email/password, then copy [`templates/bitbucket-pipelines.yml`](templates/bitbucket-pipelines.yml).
+
+**Pipeline snippet (clone + entrypoint):**
+
+```yaml
+image: python:3.12-slim
+
+pipelines:
+  default:
+    - step:
+        name: TestZeus create-execute
+        script:
+          - apt-get update && apt-get install -y --no-install-recommends jq git ca-certificates
+          - export TESTZEUS_ACTION_REF="${TESTZEUS_ACTION_REF:-v1}"
+          - export TEST_RUN_NAME="${TEST_RUN_NAME:-Smoke action suite}"
+          - export EXECUTION_MODE="${EXECUTION_MODE:-lenient}"
+          - export REPORT_FILENAME="${REPORT_FILENAME:-ctrf-report.json}"
+          - git clone --depth 1 --branch "${TESTZEUS_ACTION_REF}" https://github.com/test-zeus-ai/testzeus-create-execute.git /tmp/testzeus-create-execute
+          - /tmp/testzeus-create-execute/scripts/entrypoint.sh
+        artifacts:
+          - "*.json"
+          - downloads/**
+```
+
+**Bitbucket Pipe** (GHCR image from the `release` workflow):
+
+```yaml
+script:
+  - pipe: docker://ghcr.io/test-zeus-ai/testzeus-create-execute:v1
+    variables:
+      TESTZEUS_TOKEN: $TESTZEUS_TOKEN
+      TEST_RUN_NAME: "CI Smoke Tests"
+      EXECUTION_MODE: "lenient"
+      REPORT_FILENAME: "ctrf-report.json"
+```
+
+Build locally from the repo root:
+
+```bash
+docker build -f bitbucket-pipe/Dockerfile -t ghcr.io/test-zeus-ai/testzeus-create-execute:local .
 ```
 
 ### Advanced Usage with Custom Triggers
@@ -277,8 +417,7 @@ jobs:
     - name: Run Smoke Suite
       uses: test-zeus-ai/testzeus-create-execute@v1
       with:
-        email: ${{ secrets.TESTZEUS_EMAIL }}
-        password: ${{ secrets.TESTZEUS_PASSWORD }}
+        token: ${{ secrets.TESTZEUS_TOKEN }}
         name: 'Scheduled Smoke Tests'
         execution_mode: 'strict'
         
@@ -316,8 +455,7 @@ jobs:
     - name: Run Staging Tests
       uses: test-zeus-ai/testzeus-create-execute@v1
       with:
-        email: ${{ secrets.TESTZEUS_EMAIL }}
-        password: ${{ secrets.TESTZEUS_PASSWORD }}
+        token: ${{ secrets.TESTZEUS_TOKEN }}
         name: 'Staging Environment Tests'
         execution_mode: 'lenient'
         
@@ -328,8 +466,7 @@ jobs:
     - name: Run Production Tests
       uses: test-zeus-ai/testzeus-create-execute@v1
       with:
-        email: ${{ secrets.TESTZEUS_EMAIL }}
-        password: ${{ secrets.TESTZEUS_PASSWORD }}
+        token: ${{ secrets.TESTZEUS_TOKEN }}
         name: 'Production Environment Tests'
         execution_mode: 'strict'
 ```
@@ -786,5 +923,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For issues related to:
 - **TestZeus CLI**: Contact TestZeus support
-- **This Action**: Open an issue in this repository
-- **GitHub Actions**: Check GitHub's documentation
+- **This repo (Action / GitLab / Bitbucket adapters)**: Open an issue in this repository
+- **GitHub Actions / GitLab CI / Bitbucket Pipelines**: See the respective platform docs
+
+Prefer `TESTZEUS_TOKEN` in CI. Pin consumers to `@v1` / `TESTZEUS_ACTION_REF=v1`. Use **self-test** to validate releases.

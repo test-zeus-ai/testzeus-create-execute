@@ -1,0 +1,41 @@
+name: testzeus-create-execute
+image: ghcr.io/test-zeus-ai/testzeus-create-execute:v1
+description: Create TestZeus tests from ./tests and execute a monitored run group
+category: Test
+repository: https://github.com/test-zeus-ai/testzeus-create-execute
+vendor:
+  name: TestZeus
+  website: https://testzeus.com
+maintainer:
+  name: TestZeus
+  website: https://testzeus.com
+variables:
+  - name: TESTZEUS_TOKEN
+    description: TestZeus PocketBase JWT (preferred)
+    required: false
+  - name: TESTZEUS_EMAIL
+    description: TestZeus login email (fallback when token is not set)
+    required: false
+  - name: TESTZEUS_PASSWORD
+    description: TestZeus login password (fallback when token is not set)
+    required: false
+  - name: TEST_RUN_NAME
+    description: Name for the test run group
+    default: Smoke action suite
+    required: false
+  - name: EXECUTION_MODE
+    description: Execution mode (lenient or strict)
+    default: lenient
+    required: false
+  - name: REPORT_FILENAME
+    description: CTRF report filename
+    default: ctrf-report.json
+    required: false
+  - name: NOTIFICATION_CHANNELS
+    description: Comma-separated notification channel IDs
+    default: ""
+    required: false
+tags:
+  - testzeus
+  - testing
+  - ctrf

@@ -1,0 +1,48 @@
+name: self-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      execution_mode:
+        description: Execution mode
+        required: false
+        default: lenient
+        type: choice
+        options:
+          - lenient
+          - strict
+
+permissions:
+  contents: read
+
+jobs:
+  create-execute-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare smoke tests fixture
+        run: |
+          rm -rf tests
+          cp -R examples/smoke/tests tests
+
+      - name: Run create-execute (local action)
+        uses: ./
+        with:
+          token: ${{ secrets.TESTZEUS_TOKEN }}
+          email: ${{ secrets.TESTZEUS_EMAIL }}
+          password: ${{ secrets.TESTZEUS_PASSWORD }}
+          name: GH self-test smoke
+          execution_mode: ${{ inputs.execution_mode }}
+          filename: ctrf-report.json
+
+      - name: Upload CTRF artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctrf-report
+          path: |
+            ctrf-report.json
+            downloads/**
+          if-no-files-found: warn

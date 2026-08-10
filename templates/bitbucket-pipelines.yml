@@ -1,0 +1,42 @@
+# Example Bitbucket Pipelines config for TestZeus create-execute.
+# Copy into your consumer repo as bitbucket-pipelines.yml (or merge the step).
+#
+# Repository variables (secured):
+#   TESTZEUS_TOKEN (preferred)
+#   or TESTZEUS_EMAIL + TESTZEUS_PASSWORD
+#
+# Optional:
+#   TEST_RUN_NAME, EXECUTION_MODE, REPORT_FILENAME, NOTIFICATION_CHANNELS
+#   TESTZEUS_ACTION_REF (default: v1)
+
+image: python:3.12-slim
+
+definitions:
+  steps:
+    - step: &testzeus-create-execute
+        name: TestZeus create-execute
+        caches:
+          - pip
+        script:
+          - apt-get update && apt-get install -y --no-install-recommends jq git ca-certificates
+          - export TESTZEUS_ACTION_REF="${TESTZEUS_ACTION_REF:-v1}"
+          - export TEST_RUN_NAME="${TEST_RUN_NAME:-Smoke action suite}"
+          - export EXECUTION_MODE="${EXECUTION_MODE:-lenient}"
+          - export REPORT_FILENAME="${REPORT_FILENAME:-ctrf-report.json}"
+          - export NOTIFICATION_CHANNELS="${NOTIFICATION_CHANNELS:-}"
+          - git clone --depth 1 --branch "${TESTZEUS_ACTION_REF}" https://github.com/test-zeus-ai/testzeus-create-execute.git /tmp/testzeus-create-execute
+          - chmod +x /tmp/testzeus-create-execute/scripts/entrypoint.sh
+          - /tmp/testzeus-create-execute/scripts/entrypoint.sh
+        artifacts:
+          - "*.json"
+          - downloads/**
+
+pipelines:
+  default:
+    - step: *testzeus-create-execute
+  pull-requests:
+    "**":
+      - step: *testzeus-create-execute
+  branches:
+    main:
+      - step: *testzeus-create-execute

@@ -4,12 +4,18 @@ description: 'Run tests and report results'
 author: 'TestZeus'
 
 inputs:
+  token:
+    description: 'TestZeus PocketBase JWT (preferred over email/password)'
+    required: false
+    default: ''
   email:
-    description: 'TestZeus login email'
-    required: true
+    description: 'TestZeus login email (fallback when token is not set)'
+    required: false
+    default: ''
   password:
-    description: 'TestZeus login password'
-    required: true
+    description: 'TestZeus login password (fallback when token is not set)'
+    required: false
+    default: ''
   name:
     description: 'Name for the test run group'
     required: false
@@ -26,35 +32,20 @@ inputs:
     description: 'Notification channels ids for the test run eg: "1234567890,1234567891"'
     required: false
     default: ''
-  
+
 runs:
   using: 'composite'
   steps:
-    - name: Install dependencies  
+    - name: Run TestZeus create-execute
       shell: bash
+      env:
+        TESTZEUS_TOKEN: ${{ inputs.token }}
+        TESTZEUS_EMAIL: ${{ inputs.email }}
+        TESTZEUS_PASSWORD: ${{ inputs.password }}
+        TEST_RUN_NAME: ${{ inputs.name }}
+        EXECUTION_MODE: ${{ inputs.execution_mode }}
+        REPORT_FILENAME: ${{ inputs.filename }}
+        NOTIFICATION_CHANNELS: ${{ inputs.notification_channels }}
       run: |
-        pip install --upgrade testzeus-cli jq python-dateutil
-
-    - name: Login to TestZeus
-      shell: bash
-      run: |
-        echo "🔐 Logging into TestZeus..."
-        LOGIN_OUTPUT=$(testzeus login --email "${{ inputs.email }}" --password "${{ inputs.password }}" 2>&1)
-
-        if echo "$LOGIN_OUTPUT" | grep -q "Login failed"; then
-          echo "❌ Login failed: aborting action."
-          exit 1
-        fi
-
-        echo "✅ Successfully logged into TestZeus."
-
-    - name: Generate Test Report
-      shell: bash
-      run: |
-        echo "Creating test..."
-        chmod +x "${{ github.action_path }}/scripts/create_test_report.sh"
-        export TEST_RUN_NAME="${{ inputs.name }}"
-        export EXECUTION_MODE="${{ inputs.execution_mode }}"
-        export REPORT_FILENAME="${{ inputs.filename }}"
-        export NOTIFICATION_CHANNELS="${{ inputs.notification_channels }}"
-        "${{ github.action_path }}/scripts/create_test_report.sh"
+        chmod +x "${{ github.action_path }}/scripts/entrypoint.sh"
+        "${{ github.action_path }}/scripts/entrypoint.sh"

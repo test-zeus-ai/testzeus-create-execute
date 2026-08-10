@@ -1,0 +1,36 @@
+# Include this file from a consumer GitLab project, or copy the job below.
+#
+# Example (.gitlab-ci.yml):
+#   include:
+#     - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
+#
+# Preferred CI/CD variable (masked): TESTZEUS_TOKEN
+# Fallback: TESTZEUS_EMAIL + TESTZEUS_PASSWORD
+
+.testzeus-create-execute:
+  image: python:3.12-slim
+  variables:
+    TESTZEUS_ACTION_REF: "v1"
+    TEST_RUN_NAME: "Smoke action suite"
+    EXECUTION_MODE: "lenient"
+    REPORT_FILENAME: "ctrf-report.json"
+    NOTIFICATION_CHANNELS: ""
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends jq git ca-certificates
+    - git clone --depth 1 --branch "${TESTZEUS_ACTION_REF}" https://github.com/test-zeus-ai/testzeus-create-execute.git /tmp/testzeus-create-execute
+    - chmod +x /tmp/testzeus-create-execute/scripts/entrypoint.sh
+  script:
+    - /tmp/testzeus-create-execute/scripts/entrypoint.sh
+  artifacts:
+    when: always
+    paths:
+      - "${REPORT_FILENAME}"
+      - downloads/
+    expire_in: 7 days
+
+testzeus-create-execute:
+  extends: .testzeus-create-execute
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
