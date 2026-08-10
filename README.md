@@ -106,11 +106,11 @@ TestZeus entity names (tests, test-data, environments, hypermind code blocks)
 must match: **only lowercase letters, numbers, and underscores; must start with
 a letter** (same rule as UIX `validateEntityName`).
 
-create-execute sanitizes folder/case names before create — hyphens become
-underscores. Example:
+Prefer folder names with underscores (`tests/test_file_upload/`). create-execute
+also sanitizes any remaining hyphens before create. Example:
 
 ```text
-tests/test-file_upload/test-data/sf-data/data.txt
+tests/test_file_upload/test-data/sf_data/data.txt
   → test_data name: test_file_upload_sf_data_<unix_seed>
 ```
 
@@ -132,7 +132,7 @@ The action follows this logic for creating tests:
 - Code blocks are automatically linked to the test via the `--hypermind-code-blocks` parameter
 
 ### 3. **Test Creation Per Directory**
-For each `tests/test-*` directory:
+For each `tests/test_*` directory:
 
 - **Feature File Only**: If no `test-data/` directory exists, creates a test with just the feature file
 - **With Test Data**: If `test-data/` directory exists:
@@ -327,7 +327,7 @@ Use these minimal consumer repos to validate a branch/tag of create-execute end-
 
 Larger / scheduled platform suite (also consumes this action): [test-zeus-ai/platform-test-rig](https://github.com/test-zeus-ai/platform-test-rig).
 
-Each small smoke repo has a single `tests/test-smoke/` fixture (`example.com`). Secrets: `TESTZEUS_EMAIL` / `TESTZEUS_PASSWORD` (or `TESTZEUS_TOKEN` where supported).
+Each small smoke repo has a single `tests/test_smoke/` fixture (`example.com`). Secrets: `TESTZEUS_EMAIL` / `TESTZEUS_PASSWORD` (or `TESTZEUS_TOKEN` where supported).
 
 ## Usage
 

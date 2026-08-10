@@ -38,9 +38,15 @@ create_test_record() {
   "${create_cmd[@]}" | jq -r '.id'
 }
 
-test_dirs=(./tests/test-*)
+# Prefer test_* (entity-name safe). Still accept legacy test-* folders.
+mapfile -t test_dirs < <(
+  {
+    compgen -G './tests/test_*' || true
+    compgen -G './tests/test-*' || true
+  } | awk 'NF && !seen[$0]++'
+)
 if (( ${#test_dirs[@]} == 0 )); then
-  echo "❌ No ./tests/test-* directories found; aborting."
+  echo "❌ No ./tests/test_* (or legacy test-*) directories found; aborting."
   exit 1
 fi
 
@@ -62,18 +68,32 @@ for test_dir in "${test_dirs[@]}"; do
   # Process per-test environment if it exists
   TEST_ENV_ID=""
   TEST_ENV_DIR="$test_dir/environment"
+  TMP_ENV_DATA_FILE=""
 
   if [[ -d "$TEST_ENV_DIR" ]]; then
     ENV_DATA_FILE="$TEST_ENV_DIR/data.txt"
+    EXTRA_JSON_FILE="$TEST_ENV_DIR/extra.json"
 
-    if [[ -f "$ENV_DATA_FILE" ]]; then
+    # data.txt is optional — extra.json alone (e.g. connected_env) is enough to create an env.
+    if [[ -f "$ENV_DATA_FILE" || -f "$EXTRA_JSON_FILE" ]]; then
       echo "🌍 Creating environment for $TEST_NAME..."
       ENV_ENTITY_NAME="$(sanitize_entity_name "${TEST_NAME}_env_${SEED_ID}")"
 
-      TEST_ENV_ID=$(testzeus --format json environments create --name "$ENV_ENTITY_NAME" --data-file "$ENV_DATA_FILE" | jq -r '.id')
+      CREATE_ENV_DATA_FILE="$ENV_DATA_FILE"
+      if [[ ! -f "$CREATE_ENV_DATA_FILE" ]]; then
+        TMP_ENV_DATA_FILE="$(mktemp)"
+        printf '%s\n' '{"items":[]}' >"$TMP_ENV_DATA_FILE"
+        CREATE_ENV_DATA_FILE="$TMP_ENV_DATA_FILE"
+      fi
+
+      TEST_ENV_ID=$(testzeus --format json environments create --name "$ENV_ENTITY_NAME" --data-file "$CREATE_ENV_DATA_FILE" | jq -r '.id')
       echo "✅ Created environment ID: $TEST_ENV_ID (name: $ENV_ENTITY_NAME)"
 
-      EXTRA_JSON_FILE="$TEST_ENV_DIR/extra.json"
+      if [[ -n "$TMP_ENV_DATA_FILE" ]]; then
+        rm -f "$TMP_ENV_DATA_FILE"
+        TMP_ENV_DATA_FILE=""
+      fi
+
       if [[ -f "$EXTRA_JSON_FILE" ]]; then
         echo "📋 Processing extra.json for connected environments..."
         CONNECTED_ENV_ID=$(jq -r '.connected_env // empty' "$EXTRA_JSON_FILE")
@@ -96,7 +116,7 @@ for test_dir in "${test_dirs[@]}"; do
         done
       fi
     else
-      echo "⚠️ Warning: environment directory exists for $TEST_NAME but no data.txt found"
+      echo "⚠️ Warning: environment directory exists for $TEST_NAME but no data.txt or extra.json found"
     fi
   fi
 
@@ -214,7 +234,7 @@ for test_dir in "${test_dirs[@]}"; do
 done
 
 if [[ -z "$ALL_TEST_IDS" ]]; then
-  echo "❌ No tests created from ./tests/test-*; aborting."
+  echo "❌ No tests created from ./tests/test_*; aborting."
   exit 1
 fi
 
