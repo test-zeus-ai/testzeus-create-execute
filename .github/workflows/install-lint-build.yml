@@ -1,10 +1,11 @@
+# Check name must remain `install-lint-build` — required by the main branch ruleset.
 name: install-lint-build
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: read
@@ -12,31 +13,74 @@ permissions:
 jobs:
   install-lint-build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
 
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Install lint tools
-        run: pip install ruff
-
-      - name: Run linting
+      - name: bash -n
         run: |
-          ruff check . || true
-          ruff format --check . || true
+          set -euo pipefail
+          for f in scripts/*.sh; do
+            echo "bash -n $f"
+            bash -n "$f"
+          done
 
-      - name: Run tests (if pytest exists)
+      - name: python -m py_compile authenticate_ci.py
+        run: python3 -m py_compile scripts/authenticate_ci.py
+
+      - name: shellcheck
         run: |
-          if pip show pytest > /dev/null 2>&1; then
-            pytest || true
-          fi
+          set -euo pipefail
+          # Strict on new shared entrypoint helpers
+          shellcheck -s bash -S warning scripts/lib.sh scripts/entrypoint.sh
+          # Legacy orchestrator scripts: fail on errors only (pre-existing style/warning debt)
+          shellcheck -s bash -S error scripts/create_test_report.sh scripts/file_name_replacement.sh
+
+      - name: Validate action.yml structure
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          try:
+              import yaml
+          except ImportError:
+              import subprocess
+              subprocess.check_call(["pip", "install", "pyyaml"])
+              import yaml
+
+          action = yaml.safe_load(Path("action.yml").read_text())
+          assert action.get("runs", {}).get("using") == "composite", "action.yml must be composite"
+          assert "entrypoint.sh" in Path("action.yml").read_text(), "action.yml must invoke entrypoint.sh"
+          for required in ("token", "email", "password", "name", "execution_mode", "filename"):
+              assert required in action.get("inputs", {}), f"missing input: {required}"
+          print("action.yml OK")
+          PY
+
+      - name: Validate template YAML
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          try:
+              import yaml
+          except ImportError:
+              import subprocess
+              subprocess.check_call(["pip", "install", "pyyaml"])
+              import yaml
+
+          paths = [
+              Path("templates/gitlab-ci.yml"),
+              Path("templates/bitbucket-pipelines.yml"),
+              Path("templates/create-execute/template.yml"),
+              Path("bitbucket-pipe/pipe.yml"),
+          ]
+          for path in paths:
+              text = path.read_text()
+              # GitLab CI components use a spec/--- document split
+              docs = list(yaml.safe_load_all(text))
+              assert any(doc is not None for doc in docs), f"empty yaml: {path}"
+              print(f"{path} OK")
+          PY

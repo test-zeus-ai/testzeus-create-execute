@@ -1,0 +1,41 @@
+spec:
+  inputs:
+    name:
+      default: "Smoke action suite"
+      description: "Name for the test run group"
+    execution_mode:
+      default: "lenient"
+      description: "Execution mode (lenient or strict)"
+    filename:
+      default: "ctrf-report.json"
+      description: "CTRF report filename"
+    notification_channels:
+      default: ""
+      description: "Comma-separated notification channel IDs"
+    action_ref:
+      default: "v1"
+      description: "Git ref of testzeus-create-execute to clone (pin to a release tag)"
+    stage:
+      default: "test"
+      description: "GitLab CI stage name"
+---
+create-execute:
+  stage: $[[ inputs.stage ]]
+  image: python:3.12-slim
+  variables:
+    TEST_RUN_NAME: $[[ inputs.name ]]
+    EXECUTION_MODE: $[[ inputs.execution_mode ]]
+    REPORT_FILENAME: $[[ inputs.filename ]]
+    NOTIFICATION_CHANNELS: $[[ inputs.notification_channels ]]
+    TESTZEUS_ACTION_REF: $[[ inputs.action_ref ]]
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends jq git ca-certificates
+    - git clone --depth 1 --branch "${TESTZEUS_ACTION_REF}" https://github.com/test-zeus-ai/testzeus-create-execute.git /tmp/testzeus-create-execute
+    - chmod +x /tmp/testzeus-create-execute/scripts/entrypoint.sh
+  script:
+    - /tmp/testzeus-create-execute/scripts/entrypoint.sh
+  artifacts:
+    when: always
+    paths:
+      - downloads/
+    expire_in: 7 days

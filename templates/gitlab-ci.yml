@@ -1,0 +1,45 @@
+# Include this file from a consumer GitLab project.
+#
+# Exports only the hidden job `.testzeus-create-execute`. You must declare a
+# concrete job that `extends` it (see example below).
+#
+# Full E2E setup: docs/CONSUMER_SETUP.md  |  Agents: AGENTS.md
+#
+# Example (.gitlab-ci.yml):
+#   include:
+#     - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
+#   testzeus-create-execute:
+#     extends: .testzeus-create-execute
+#     stage: test
+#     variables:
+#       TESTZEUS_ACTION_REF: "v1"
+#     rules:
+#       - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+#       - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+#
+# Preferred CI/CD variable (masked): TESTZEUS_TOKEN
+# Fallback: TESTZEUS_EMAIL + TESTZEUS_PASSWORD
+# Clone ref defaults to v1 via ${TESTZEUS_ACTION_REF:-v1} in before_script.
+# CTRF report path: downloads/${REPORT_FILENAME}
+
+variables:
+  TEST_RUN_NAME: "Smoke action suite"
+  EXECUTION_MODE: "lenient"
+  REPORT_FILENAME: "ctrf-report.json"
+  NOTIFICATION_CHANNELS: ""
+
+.testzeus-create-execute:
+  image: python:3.12-slim
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends jq git ca-certificates
+    - export TESTZEUS_ACTION_REF="${TESTZEUS_ACTION_REF:-v1}"
+    - echo "Cloning testzeus-create-execute@${TESTZEUS_ACTION_REF}"
+    - git clone --depth 1 --branch "${TESTZEUS_ACTION_REF}" https://github.com/test-zeus-ai/testzeus-create-execute.git /tmp/testzeus-create-execute
+    - chmod +x /tmp/testzeus-create-execute/scripts/entrypoint.sh
+  script:
+    - /tmp/testzeus-create-execute/scripts/entrypoint.sh
+  artifacts:
+    when: always
+    paths:
+      - downloads/
+    expire_in: 7 days
