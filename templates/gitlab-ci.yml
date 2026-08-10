@@ -6,15 +6,19 @@
 #
 # Preferred CI/CD variable (masked): TESTZEUS_TOKEN
 # Fallback: TESTZEUS_EMAIL + TESTZEUS_PASSWORD
+#
+# Override TESTZEUS_ACTION_REF (and other vars) at the pipeline top level or via
+# CI/CD settings — do not redefine them on the job, or they win over consumers.
+
+variables:
+  TESTZEUS_ACTION_REF: "v1"
+  TEST_RUN_NAME: "Smoke action suite"
+  EXECUTION_MODE: "lenient"
+  REPORT_FILENAME: "ctrf-report.json"
+  NOTIFICATION_CHANNELS: ""
 
 .testzeus-create-execute:
   image: python:3.12-slim
-  variables:
-    TESTZEUS_ACTION_REF: "v1"
-    TEST_RUN_NAME: "Smoke action suite"
-    EXECUTION_MODE: "lenient"
-    REPORT_FILENAME: "ctrf-report.json"
-    NOTIFICATION_CHANNELS: ""
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends jq git ca-certificates
     - git clone --depth 1 --branch "${TESTZEUS_ACTION_REF}" https://github.com/test-zeus-ai/testzeus-create-execute.git /tmp/testzeus-create-execute
