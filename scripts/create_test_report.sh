@@ -249,9 +249,10 @@ set -e
 # successful run, normalize to the contracted REPORT_FILENAME path.
 if [[ ! -f "$REPORT_PATH" ]]; then
   shopt -s nullglob
-  candidates=(downloads/test_report_*.json downloads/*.json)
+  # Prefer the CLI's test_report_*.json rename source; sort for stable pick.
+  mapfile -t candidates < <(printf '%s\n' downloads/test_report_*.json downloads/*.json 2>/dev/null | sort -u)
   shopt -u nullglob
-  if (( ${#candidates[@]} > 0 )); then
+  if (( ${#candidates[@]} > 0 )) && [[ -n "${candidates[0]}" ]]; then
     mv -f "${candidates[0]}" "$REPORT_PATH"
     echo "Normalized CTRF report to ${REPORT_PATH}"
   fi
@@ -262,8 +263,13 @@ if [[ -f "$REPORT_PATH" ]]; then
   # so existing GitHub consumers (e.g. platform-test-rig) that read REPORT_FILENAME
   # from the checkout root keep working.
   cp -f "$REPORT_PATH" "./${REPORT_FILENAME}"
-  echo "✅ CTRF report available at ${REPORT_PATH} (and ./${REPORT_FILENAME})"
-  exit 0
+  if [[ "${execute_rc:-0}" -eq 0 ]]; then
+    echo "✅ CTRF report available at ${REPORT_PATH} (and ./${REPORT_FILENAME})"
+    exit 0
+  fi
+  # Do not greenwash strict-mode / CLI failures just because a report was written.
+  echo "⚠️ CTRF report available at ${REPORT_PATH}, but execute-and-monitor exited ${execute_rc}"
+  exit "${execute_rc}"
 fi
 
 echo "❌ execute-and-monitor failed and no CTRF report was produced at ${REPORT_PATH}"
