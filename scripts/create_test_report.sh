@@ -223,10 +223,13 @@ REPORT_PATH="downloads/${REPORT_FILENAME}"
 
 echo ""
 echo "Running test-run-group and generating CTRF report..."
+# execute-and-monitor requires a tenant-unique name; consumers often pass a fixed
+# display name (e.g. platform-test-rig "Smoke action Suite"), so stamp a suffix.
+UNIQUE_RUN_NAME="${TEST_RUN_NAME}-$(date +%Y%m%d-%H%M%S)"
 # Avoid passing an empty --notification-channels flag (some CLI versions mishandle it).
 execute_cmd=(
   testzeus test-run-group execute-and-monitor
-  --name "$TEST_RUN_NAME"
+  --name "$UNIQUE_RUN_NAME"
   --test-ids "$ALL_TEST_IDS"
   --interval 60
   --filename "$REPORT_FILENAME"
