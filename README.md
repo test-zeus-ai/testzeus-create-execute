@@ -280,7 +280,9 @@ Pin consumers to a release tag, not `main`:
 | Bitbucket Pipe image | `ghcr.io/test-zeus-ai/testzeus-create-execute:v1` |
 | TestZeus CLI (PyPI) | `testzeus-cli==0.0.30` (override with `TESTZEUS_CLI_VERSION`) |
 
-Maintainers: push a semver tag (`v1.2.3`). The `release` workflow publishes the GHCR image and a GitHub Release. Move the floating `v1` tag to the latest compatible release when shipping — `@v1` / `:v1` move with that tag. Bump the pinned CLI in `scripts/lib.sh` + `bitbucket-pipe/Dockerfile` deliberately and note it in release notes.
+Maintainers: push a semver tag (`v1.2.3`). The `release` workflow publishes the GHCR image and a GitHub Release. **Floating tags move:** each `v*` release updates `@v1` / image `:v1` and `:latest` to that build — call this out in release notes (the workflow body already does). Pin a full semver if you need a freeze. First `v1` after the multi-SCM merge must point at a commit that includes `scripts/entrypoint.sh`. Bump the pinned CLI in `scripts/lib.sh` + `bitbucket-pipe/Dockerfile` deliberately and note it in release notes.
+
+Local Pipe debug: see [`bitbucket-pipe/README.md`](bitbucket-pipe/README.md) (`WORKDIR` mount path).
 
 ## Self-test
 

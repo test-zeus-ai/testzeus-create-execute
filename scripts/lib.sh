@@ -20,20 +20,23 @@ set_run_defaults() {
   export NOTIFICATION_CHANNELS="${NOTIFICATION_CHANNELS:-}"
 }
 
-# Prefer TESTZEUS_TOKEN (session-exchange). Fall back to email/password login.
-# When token auth is used, installs a PATH shim so bare `testzeus` calls use --profile ci.
+# Prefer TESTZEUS_TOKEN. Fall back to email/password.
+# Auth reads secrets from the environment only (see authenticate_ci.py) so they
+# never appear on process argv / `ps` listings.
 authenticate_testzeus() {
-  local real_testzeus
-  real_testzeus="$(command -v testzeus)"
+  local script_dir real_testzeus profile
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
   if [[ -n "${TESTZEUS_TOKEN:-}" ]]; then
-    local profile="${TESTZEUS_PROFILE:-ci}"
+    profile="${TESTZEUS_PROFILE:-ci}"
+    export TESTZEUS_PROFILE="$profile"
     echo "🔐 Authenticating with TESTZEUS_TOKEN (profile: ${profile})..."
-    if ! testzeus session-exchange --token "$TESTZEUS_TOKEN" --profile "$profile"; then
-      echo "❌ Token session-exchange failed: aborting."
+    if ! python3 "${script_dir}/authenticate_ci.py"; then
+      echo "❌ Token authentication failed: aborting."
       exit 1
     fi
 
+    real_testzeus="$(command -v testzeus)"
     local shim_dir
     shim_dir="$(mktemp -d "${TMPDIR:-/tmp}/testzeus-shim.XXXXXX")"
     cat >"${shim_dir}/testzeus" <<EOF
@@ -42,14 +45,14 @@ exec "${real_testzeus}" --profile "${profile}" "\$@"
 EOF
     chmod +x "${shim_dir}/testzeus"
     export PATH="${shim_dir}:${PATH}"
-    export TESTZEUS_PROFILE="$profile"
     echo "✅ Authenticated via token (shim profile: ${profile})."
     return 0
   fi
 
   if [[ -n "${TESTZEUS_EMAIL:-}" && -n "${TESTZEUS_PASSWORD:-}" ]]; then
+    export TESTZEUS_PROFILE="${TESTZEUS_PROFILE:-default}"
     echo "🔐 Logging into TestZeus with email/password..."
-    if ! testzeus login --email "$TESTZEUS_EMAIL" --password "$TESTZEUS_PASSWORD"; then
+    if ! python3 "${script_dir}/authenticate_ci.py"; then
       echo "❌ Login failed: aborting."
       exit 1
     fi

@@ -59,7 +59,11 @@ jobs:
             ## Distribution
 
             - **GitHub Action:** `test-zeus-ai/testzeus-create-execute@${{ steps.version.outputs.tag }}` (or `@${{ steps.version.outputs.major }}`)
-            - **Bitbucket Pipe image:** `${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}`
+            - **Bitbucket Pipe image:** `${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}` (also `:latest` and `:${{ steps.version.outputs.major }}`)
             - **GitLab / Bitbucket scripts:** set `TESTZEUS_ACTION_REF=${{ steps.version.outputs.tag }}` (default templates use `v1`)
 
             Prefer `TESTZEUS_TOKEN` over email/password in CI.
+
+            ### Floating tags move
+
+            Publishing this release **moves** the floating major tag `@${{ steps.version.outputs.major }}` / image `:${{ steps.version.outputs.major }}` and `:latest` to this build. Consumers pinned only to `@v1` / `:v1` pick up this release on the next run. Pin a full semver (`@${{ steps.version.outputs.tag }}`) if you need a freeze.

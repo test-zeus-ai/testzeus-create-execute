@@ -28,6 +28,9 @@ jobs:
             bash -n "$f"
           done
 
+      - name: python -m py_compile authenticate_ci.py
+        run: python3 -m py_compile scripts/authenticate_ci.py
+
       - name: shellcheck
         run: |
           set -euo pipefail

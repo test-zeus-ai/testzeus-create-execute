@@ -38,6 +38,14 @@ Top-level `variables:` after `include:` alone may not override included defaults
 - Bitbucket: **Secured** repository variable.
 - Never commit credentials. Rotate if they appeared in chat or plaintext logs.
 
+Auth in create-execute goes through `scripts/authenticate_ci.py`, which reads secrets from the environment only (not CLI argv), so passwords/tokens should not show up in `ps` on shared runners.
+
+## CTRF report missing / wrong name after a green run
+
+**Cause:** `execute-and-monitor` may download `downloads/test_report_*.json` and exit non-zero before renaming to `REPORT_FILENAME`.
+
+**Fix:** Current scripts normalize any `downloads/test_report_*.json` (or other `downloads/*.json`) to `downloads/<REPORT_FILENAME>` when the CLI exits oddly after a successful download.
+
 ---
 
 ## No `.feature` file / no `tests/test-*`

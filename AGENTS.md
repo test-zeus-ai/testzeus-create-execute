@@ -52,8 +52,8 @@ Follow [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md) end-to-end. Short checkl
 
 Preference order inside `scripts/entrypoint.sh` / `scripts/lib.sh`:
 
-1. `TESTZEUS_TOKEN` → CLI `session-exchange` + profile shim (`TESTZEUS_PROFILE`, default `ci`)
-2. Else `TESTZEUS_EMAIL` + `TESTZEUS_PASSWORD` → CLI login
+1. `TESTZEUS_TOKEN` → `scripts/authenticate_ci.py` (env-only; no secrets on argv) + profile shim (`TESTZEUS_PROFILE`, default `ci`)
+2. Else `TESTZEUS_EMAIL` + `TESTZEUS_PASSWORD` → same helper (env-only login)
 
 | Platform | Where to store |
 |----------|----------------|

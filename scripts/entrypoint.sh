@@ -18,6 +18,9 @@ require_bin testzeus
 
 authenticate_testzeus
 
-chmod +x "$SCRIPT_DIR/create_test_report.sh" "$SCRIPT_DIR/file_name_replacement.sh"
+chmod +x \
+  "$SCRIPT_DIR/create_test_report.sh" \
+  "$SCRIPT_DIR/file_name_replacement.sh" \
+  "$SCRIPT_DIR/authenticate_ci.py"
 echo "Creating test..."
 "$SCRIPT_DIR/create_test_report.sh"
