@@ -10,7 +10,7 @@ Humans: start with [README.md](README.md) and [docs/CONSUMER_SETUP.md](docs/CONS
 
 CI packaging that:
 
-1. Reads `./tests/test-*` folders (Gherkin `.feature` + optional env / test-data / hypermind)
+1. Reads `./tests/test_*` folders (Gherkin `.feature` + optional env / test-data / hypermind; legacy `test-*` still accepted)
 2. Creates matching TestZeus resources via `testzeus-cli`
 3. Runs `test-run-group execute-and-monitor`
 4. Writes a CTRF report to `downloads/<REPORT_FILENAME>`
@@ -30,7 +30,7 @@ Do **not** invent a second orchestration path. Always call `scripts/entrypoint.s
 Follow [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md) end-to-end. Short checklist:
 
 1. Detect CI: GitHub → Action; GitLab → include template; Bitbucket → pipeline snippet or Pipe.
-2. Ensure `./tests/test-*/` exists with at least one `.feature` file (copy [examples/smoke/](examples/smoke/) if they have nothing).
+2. Ensure `./tests/test_*/` exists with at least one `.feature` file (copy [examples/smoke/](examples/smoke/) if they have nothing).
 3. Prefer secret `TESTZEUS_TOKEN` (PocketBase JWT). Fallback: `TESTZEUS_EMAIL` + `TESTZEUS_PASSWORD`.
 4. Pin version to **`v1`** (Action `@v1`, `TESTZEUS_ACTION_REF=v1`, Pipe image `:v1`) unless they explicitly want a branch for testing.
 5. Commit workflow/config + `tests/` + optional `templates/ctrf-report.hbs`.
@@ -42,7 +42,7 @@ Follow [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md) end-to-end. Short checkl
 |----|--------|
 | Pin `@v1` / `TESTZEUS_ACTION_REF=v1` for production consumers | Point production at `main` or an unmerged feature branch |
 | Put auth only in CI secrets / masked variables | Commit tokens, passwords, or JWTs |
-| Keep `tests/test-*` naming (`test-` prefix required) | Invent alternate folder layouts |
+| Keep `tests/test_*` naming (`test_` prefix required) | Invent alternate folder layouts |
 | On GitLab, set `TESTZEUS_ACTION_REF` at **job** level if overriding the default | Assume top-level `variables:` always wins over includes |
 | Reuse [examples/smoke/](examples/smoke/) for first green run | Skip verification |
 
@@ -71,7 +71,7 @@ Minimum:
 
 ```text
 tests/
-└── test-<name>/
+└── test_<name>/
     └── <anything>.feature
 ```
 
@@ -180,7 +180,7 @@ Rules:
 ## Verification
 
 1. Pipeline job logs show auth success (no credential values).
-2. Job finds `./tests/test-*` and creates/runs resources.
+2. Job finds `./tests/test_*` and creates/runs resources.
 3. Artifact `downloads/<REPORT_FILENAME>` (or configured name) is present.
 4. Failures: see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 

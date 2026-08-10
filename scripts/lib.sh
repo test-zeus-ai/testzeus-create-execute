@@ -13,6 +13,25 @@ require_bin() {
   fi
 }
 
+# Sanitize TestZeus entity names (test, test-data, environment, hypermind).
+# Rule: only lowercase letters, numbers, and underscores; must start with a letter.
+# Matches UIX validateEntityName / VARIABLE_KEY_REGEX: ^[a-z][a-z0-9]*(_[a-z0-9]+)*$
+# Example: test-file_upload-sf-data-1786354399 → test_file_upload_sf_data_1786354399
+sanitize_entity_name() {
+  local raw="${1:-}"
+  local name
+  name="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  name="$(printf '%s' "$name" | sed -E 's/[^a-z0-9_]+/_/g; s/_+/_/g; s/^_+//; s/_+$//')"
+  if [[ -z "$name" ]]; then
+    name="entity"
+  fi
+  if [[ ! "$name" =~ ^[a-z] ]]; then
+    name="n_${name}"
+  fi
+  name="$(printf '%s' "$name" | sed -E 's/_+/_/g')"
+  printf '%s' "$name"
+}
+
 set_run_defaults() {
   export TEST_RUN_NAME="${TEST_RUN_NAME:-Smoke action suite}"
   export EXECUTION_MODE="${EXECUTION_MODE:-lenient}"

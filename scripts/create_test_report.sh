@@ -2,9 +2,23 @@
 set -euo pipefail
 shopt -s nullglob
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/lib.sh"
+
 echo "Creating tests from ./tests directory..."
 SEED_ID=$(date +%s)
 ALL_TEST_IDS=""
+TMP_ENV_DATA_FILE=""
+
+cleanup_tmp_env_data() {
+  if [[ -n "${TMP_ENV_DATA_FILE:-}" ]]; then
+    rm -f "$TMP_ENV_DATA_FILE"
+    TMP_ENV_DATA_FILE=""
+  fi
+}
+trap cleanup_tmp_env_data EXIT
 
 create_test_record() {
   local test_name="$1"
@@ -12,10 +26,12 @@ create_test_record() {
   local test_env_id="$3"
   local hypermind_ids="$4"
   local test_data_ids="${5:-}"
+  local entity_name
+  entity_name="$(sanitize_entity_name "${test_name}_${SEED_ID}")"
   local -a create_cmd
   create_cmd=(
     testzeus --format json tests create
-    --name "${test_name}-${SEED_ID}"
+    --name "$entity_name"
     --feature-file "$feature_file"
     --status "ready"
   )
@@ -31,9 +47,15 @@ create_test_record() {
   "${create_cmd[@]}" | jq -r '.id'
 }
 
-test_dirs=(./tests/test-*)
+# Prefer test_* (entity-name safe). Still accept legacy test-* folders.
+mapfile -t test_dirs < <(
+  {
+    compgen -G './tests/test_*' || true
+    compgen -G './tests/test-*' || true
+  } | awk 'NF && !seen[$0]++'
+)
 if (( ${#test_dirs[@]} == 0 )); then
-  echo "❌ No ./tests/test-* directories found; aborting."
+  echo "❌ No ./tests/test_* (or legacy test-*) directories found; aborting."
   exit 1
 fi
 
@@ -55,17 +77,28 @@ for test_dir in "${test_dirs[@]}"; do
   # Process per-test environment if it exists
   TEST_ENV_ID=""
   TEST_ENV_DIR="$test_dir/environment"
+  cleanup_tmp_env_data
 
   if [[ -d "$TEST_ENV_DIR" ]]; then
     ENV_DATA_FILE="$TEST_ENV_DIR/data.txt"
+    EXTRA_JSON_FILE="$TEST_ENV_DIR/extra.json"
 
-    if [[ -f "$ENV_DATA_FILE" ]]; then
+    # data.txt is optional — extra.json alone (e.g. connected_env) is enough to create an env.
+    if [[ -f "$ENV_DATA_FILE" || -f "$EXTRA_JSON_FILE" ]]; then
       echo "🌍 Creating environment for $TEST_NAME..."
+      ENV_ENTITY_NAME="$(sanitize_entity_name "${TEST_NAME}_env_${SEED_ID}")"
 
-      TEST_ENV_ID=$(testzeus --format json environments create --name "${TEST_NAME}-env-${SEED_ID}" --data-file "$ENV_DATA_FILE" | jq -r '.id')
-      echo "✅ Created environment ID: $TEST_ENV_ID"
+      CREATE_ENV_DATA_FILE="$ENV_DATA_FILE"
+      if [[ ! -f "$CREATE_ENV_DATA_FILE" ]]; then
+        TMP_ENV_DATA_FILE="$(mktemp)"
+        printf '%s\n' '{"items":[]}' >"$TMP_ENV_DATA_FILE"
+        CREATE_ENV_DATA_FILE="$TMP_ENV_DATA_FILE"
+      fi
 
-      EXTRA_JSON_FILE="$TEST_ENV_DIR/extra.json"
+      TEST_ENV_ID=$(testzeus --format json environments create --name "$ENV_ENTITY_NAME" --data-file "$CREATE_ENV_DATA_FILE" | jq -r '.id')
+      cleanup_tmp_env_data
+      echo "✅ Created environment ID: $TEST_ENV_ID (name: $ENV_ENTITY_NAME)"
+
       if [[ -f "$EXTRA_JSON_FILE" ]]; then
         echo "📋 Processing extra.json for connected environments..."
         CONNECTED_ENV_ID=$(jq -r '.connected_env // empty' "$EXTRA_JSON_FILE")
@@ -88,7 +121,7 @@ for test_dir in "${test_dirs[@]}"; do
         done
       fi
     else
-      echo "⚠️ Warning: environment directory exists for $TEST_NAME but no data.txt found"
+      echo "⚠️ Warning: environment directory exists for $TEST_NAME but no data.txt or extra.json found"
     fi
   fi
 
@@ -108,7 +141,7 @@ for test_dir in "${test_dirs[@]}"; do
     if [[ "$has_hypermind_file" == true ]]; then
       echo "🧠 Processing Hypermind code blocks for $TEST_NAME..."
 
-      HYPERMIND_NAME="${TEST_NAME}-${SEED_ID}"
+      HYPERMIND_NAME="$(sanitize_entity_name "${TEST_NAME}_${SEED_ID}")"
       echo "📝 Creating Hypermind code block: $HYPERMIND_NAME"
 
       hypermind_cmd=(
@@ -163,9 +196,10 @@ for test_dir in "${test_dirs[@]}"; do
     fi
 
     echo "📄 Creating test-data for $TEST_NAME/$CASE_NAME..."
-    TEST_DATA_ID=$(testzeus --format json test-data create --name "${TEST_NAME}-${CASE_NAME}-${SEED_ID}" --data-file "$DATA_FILE" | jq -r '.id')
+    TEST_DATA_ENTITY_NAME="$(sanitize_entity_name "${TEST_NAME}_${CASE_NAME}_${SEED_ID}")"
+    TEST_DATA_ID=$(testzeus --format json test-data create --name "$TEST_DATA_ENTITY_NAME" --data-file "$DATA_FILE" | jq -r '.id')
 
-    echo "✅ Created test-data ID: $TEST_DATA_ID"
+    echo "✅ Created test-data ID: $TEST_DATA_ID (name: $TEST_DATA_ENTITY_NAME)"
 
     if [[ -z "$TEST_DATA_IDS" ]]; then
       TEST_DATA_IDS="$TEST_DATA_ID"
@@ -205,7 +239,7 @@ for test_dir in "${test_dirs[@]}"; do
 done
 
 if [[ -z "$ALL_TEST_IDS" ]]; then
-  echo "❌ No tests created from ./tests/test-*; aborting."
+  echo "❌ No tests created from ./tests/test_*; aborting."
   exit 1
 fi
 
@@ -215,7 +249,6 @@ echo "Test IDs: $ALL_TEST_IDS"
 
 echo ""
 echo "🔄 Updating feature asset references..."
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/file_name_replacement.sh" "$ALL_TEST_IDS"
 
 mkdir -p downloads

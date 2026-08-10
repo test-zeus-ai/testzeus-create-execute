@@ -48,14 +48,14 @@ Auth in create-execute goes through `scripts/authenticate_ci.py`, which reads se
 
 ---
 
-## No `.feature` file / no `tests/test-*`
+## No `.feature` file / no `tests/test_*`
 
 **Cause:** Wrong working directory or folder naming.
 
 **Fix:**
 
 - Job cwd must be the consumer repo root (`actions/checkout` / default GitLab-Bitbucket checkout).
-- Directories must be `tests/test-<name>/` with a `.feature` inside.
+- Directories must be `tests/test_<name>/` with a `.feature` inside (`test_` prefix).
 - Start from [examples/smoke/](../examples/smoke/).
 
 ---

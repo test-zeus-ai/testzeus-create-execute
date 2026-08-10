@@ -9,7 +9,7 @@ For full GitHub / GitLab / Bitbucket wiring, see [docs/CONSUMER_SETUP.md](../../
 ```text
 examples/smoke/
 └── tests/
-    └── test-smoke/
+    └── test_smoke/
         └── smoke.feature
 ```
 

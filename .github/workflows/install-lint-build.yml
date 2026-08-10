@@ -37,7 +37,10 @@ jobs:
           # Strict on new shared entrypoint helpers
           shellcheck -s bash -S warning scripts/lib.sh scripts/entrypoint.sh
           # Legacy orchestrator scripts: fail on errors only (pre-existing style/warning debt)
-          shellcheck -s bash -S error scripts/create_test_report.sh scripts/file_name_replacement.sh
+          shellcheck -s bash -S error scripts/create_test_report.sh scripts/file_name_replacement.sh scripts/test_sanitize_entity_name.sh
+
+      - name: Unit test sanitize_entity_name
+        run: bash scripts/test_sanitize_entity_name.sh
 
       - name: Validate action.yml structure
         run: |

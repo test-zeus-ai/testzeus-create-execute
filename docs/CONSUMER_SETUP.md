@@ -10,7 +10,7 @@ Agents: also read [AGENTS.md](../AGENTS.md).
 
 ```text
 Customer repo
-  ./tests/test-*          ← feature files (+ optional env / data / hypermind)
+  ./tests/test_*          ← feature files (+ optional env / data / hypermind)
   CI config               ← Action | GitLab include | Bitbucket pipeline/pipe
        ↓
   scripts/entrypoint.sh   ← install CLI → auth → create_test_report.sh
@@ -40,7 +40,7 @@ Minimum:
 
 ```text
 tests/
-└── test-smoke/
+└── test_smoke/
     └── smoke.feature
 ```
 
@@ -53,9 +53,14 @@ cp -R examples/smoke/tests ./tests
 
 Rules:
 
-- Top-level dirs must match `tests/test-*`.
+- Top-level dirs must match `tests/test_*` (underscore). Legacy `tests/test-*`
+  folders are still discovered, but prefer `test_` so created names are already valid.
 - Each test dir needs exactly one `.feature` file (name can vary).
-- Optional: `environment/`, `test-data/<case>/data.txt`, `hypermind/`.
+- Optional: `environment/` (`data.txt` and/or `extra.json`), `test-data/<case>/data.txt`, `hypermind/`.
+- Created TestZeus entity names (test, test-data, environment, hypermind) are
+  sanitized to **lowercase letters, numbers, and underscores only**, and must
+  start with a letter — e.g. folder `test_file_upload` + case `sf_data` becomes
+  `test_file_upload_sf_data_<seed>`.
 - Deep reference: [README.md](../README.md) (Repository Structure).
 
 Optional CTRF Handlebars template for GitHub pretty reports:
@@ -217,7 +222,7 @@ script:
 | Check | Expected |
 |-------|----------|
 | Auth | No login/session-exchange error |
-| Discovery | Logs mention creating tests from `./tests/test-*` |
+| Discovery | Logs mention creating tests from `./tests/test_*` |
 | Execute | Run group monitor completes |
 | Report | `downloads/<REPORT_FILENAME>` exists (default `downloads/ctrf-report.json`) |
 | Clone ref (GL/BB) | Log shows intended tag/branch (e.g. `v1`) |
