@@ -10,6 +10,15 @@ source "${SCRIPT_DIR}/lib.sh"
 echo "Creating tests from ./tests directory..."
 SEED_ID=$(date +%s)
 ALL_TEST_IDS=""
+TMP_ENV_DATA_FILE=""
+
+cleanup_tmp_env_data() {
+  if [[ -n "${TMP_ENV_DATA_FILE:-}" ]]; then
+    rm -f "$TMP_ENV_DATA_FILE"
+    TMP_ENV_DATA_FILE=""
+  fi
+}
+trap cleanup_tmp_env_data EXIT
 
 create_test_record() {
   local test_name="$1"
@@ -68,7 +77,7 @@ for test_dir in "${test_dirs[@]}"; do
   # Process per-test environment if it exists
   TEST_ENV_ID=""
   TEST_ENV_DIR="$test_dir/environment"
-  TMP_ENV_DATA_FILE=""
+  cleanup_tmp_env_data
 
   if [[ -d "$TEST_ENV_DIR" ]]; then
     ENV_DATA_FILE="$TEST_ENV_DIR/data.txt"
@@ -87,12 +96,8 @@ for test_dir in "${test_dirs[@]}"; do
       fi
 
       TEST_ENV_ID=$(testzeus --format json environments create --name "$ENV_ENTITY_NAME" --data-file "$CREATE_ENV_DATA_FILE" | jq -r '.id')
+      cleanup_tmp_env_data
       echo "✅ Created environment ID: $TEST_ENV_ID (name: $ENV_ENTITY_NAME)"
-
-      if [[ -n "$TMP_ENV_DATA_FILE" ]]; then
-        rm -f "$TMP_ENV_DATA_FILE"
-        TMP_ENV_DATA_FILE=""
-      fi
 
       if [[ -f "$EXTRA_JSON_FILE" ]]; then
         echo "📋 Processing extra.json for connected environments..."
