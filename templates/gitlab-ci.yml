@@ -1,16 +1,18 @@
 # Include this file from a consumer GitLab project, or copy the job below.
 #
+# Full E2E setup: docs/CONSUMER_SETUP.md  |  Agents: AGENTS.md
+#
 # Example (.gitlab-ci.yml):
 #   include:
 #     - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
-#   variables:
-#     TESTZEUS_ACTION_REF: "v1"   # optional; shell default is v1
+#   testzeus-create-execute:
+#     extends: .testzeus-create-execute
+#     variables:
+#       TESTZEUS_ACTION_REF: "v1"   # set on the job for reliable overrides
 #
 # Preferred CI/CD variable (masked): TESTZEUS_TOKEN
 # Fallback: TESTZEUS_EMAIL + TESTZEUS_PASSWORD
-#
-# Pin TESTZEUS_ACTION_REF via pipeline variables or CI/CD settings.
-# Do not set it on this hidden job — job keys beat consumer top-level vars.
+# Clone ref defaults to v1 via ${TESTZEUS_ACTION_REF:-v1} in before_script.
 
 variables:
   TEST_RUN_NAME: "Smoke action suite"

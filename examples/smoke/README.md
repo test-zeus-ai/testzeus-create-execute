@@ -2,6 +2,8 @@
 
 Minimal consumer layout for validating create-execute end-to-end.
 
+For full GitHub / GitLab / Bitbucket wiring, see [docs/CONSUMER_SETUP.md](../../docs/CONSUMER_SETUP.md). Agents: [AGENTS.md](../../AGENTS.md).
+
 ## Layout
 
 ```text

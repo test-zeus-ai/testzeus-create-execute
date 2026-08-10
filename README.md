@@ -2,6 +2,15 @@
 
 CI packaging that creates TestZeus tests from a `./tests` folder, runs them via the TestZeus CLI, and emits a CTRF report.
 
+## Start here
+
+| Goal | Doc |
+|------|-----|
+| **End-to-end setup** (GitHub / GitLab / Bitbucket) | [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md) |
+| **AI coding agents** (Claude / Copilot) | [AGENTS.md](AGENTS.md) · [CLAUDE.md](CLAUDE.md) |
+| **Failures** | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
+| **Minimal fixture** | [examples/smoke/](examples/smoke/) |
+
 **Supported CI systems**
 
 | CI | Packaging | How to run |
@@ -11,6 +20,8 @@ CI packaging that creates TestZeus tests from a `./tests` folder, runs them via 
 | Bitbucket Pipelines | Pipeline snippet / Pipe | [`templates/bitbucket-pipelines.yml`](templates/bitbucket-pipelines.yml) or [`bitbucket-pipe/`](bitbucket-pipe/) |
 
 All platforms share the same orchestrator: [`scripts/entrypoint.sh`](scripts/entrypoint.sh) → [`scripts/create_test_report.sh`](scripts/create_test_report.sh).
+
+> **AI coding agents:** follow [AGENTS.md](AGENTS.md) and implement [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md) — do not invent a separate CI path.
 
 ## Features
 
@@ -287,6 +298,8 @@ export TESTZEUS_TOKEN='...'
 
 ### GitHub Actions — Basic Usage
 
+Full walkthrough: [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md#a-github-actions).
+
 ```yaml
 name: Run TestZeus Tests
 
@@ -301,6 +314,8 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    - uses: actions/checkout@v4
+
     - name: Run Smoke Suite
       uses: test-zeus-ai/testzeus-create-execute@v1
       with:
@@ -323,6 +338,8 @@ jobs:
 
 ### GitLab CI
 
+Full walkthrough: [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md#b-gitlab-ci).
+
 Set masked `TESTZEUS_TOKEN` (preferred) or `TESTZEUS_EMAIL` + `TESTZEUS_PASSWORD`.
 
 **Include (remote template, pinned to `v1`):**
@@ -331,11 +348,18 @@ Set masked `TESTZEUS_TOKEN` (preferred) or `TESTZEUS_EMAIL` + `TESTZEUS_PASSWORD
 include:
   - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
 
-variables:
-  TEST_RUN_NAME: "CI Smoke Tests"
-  EXECUTION_MODE: "lenient"
-  REPORT_FILENAME: "ctrf-report.json"
+# Override on the job — top-level variables after include are not always applied
+testzeus-create-execute:
+  extends: .testzeus-create-execute
+  stage: test
+  variables:
+    TESTZEUS_ACTION_REF: "v1"
+    TEST_RUN_NAME: "CI Smoke Tests"
+    EXECUTION_MODE: "lenient"
+    REPORT_FILENAME: "ctrf-report.json"
 ```
+
+The job clones this repository at `TESTZEUS_ACTION_REF` (shell default `v1`), runs `scripts/entrypoint.sh`, and uploads the CTRF file as a job artifact. Confirm the log shows `Cloning testzeus-create-execute@v1`. If you see `chmod: ... entrypoint.sh: No such file`, the wrong ref was cloned — see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
 **CI/CD Component** (when published / vendored):
 
@@ -349,11 +373,13 @@ include:
       action_ref: "v1"
 ```
 
-The job clones this repository at `TESTZEUS_ACTION_REF` (default `v1`), runs `scripts/entrypoint.sh`, and uploads the CTRF file as a job artifact. Pretty MR comments are not included — use artifacts / a GitLab report parser rather than `ctrf-io/github-test-reporter`.
+Pretty MR comments are not included — use artifacts / a GitLab report parser rather than `ctrf-io/github-test-reporter`.
 
 See [`templates/gitlab-ci.yml`](templates/gitlab-ci.yml) and [`templates/create-execute/template.yml`](templates/create-execute/template.yml).
 
 ### Bitbucket Pipelines
+
+Full walkthrough: [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md#c-bitbucket-pipelines).
 
 Set secured `TESTZEUS_TOKEN` (preferred) or email/password, then copy [`templates/bitbucket-pipelines.yml`](templates/bitbucket-pipelines.yml).
 
@@ -867,6 +893,8 @@ This standardized format ensures compatibility with CTRF-compliant tools and ena
 
 ## Troubleshooting
 
+Platform-agnostic runbook (including GitLab wrong-ref / missing `entrypoint.sh`): **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**.
+
 ### Common Issues
 
 1. **"No .feature file found"**
@@ -879,10 +907,11 @@ This standardized format ensures compatibility with CTRF-compliant tools and ena
 
 3. **"Login failed"**
    - Check your TestZeus credentials in secrets
+   - Prefer `TESTZEUS_TOKEN`; ensure email/password both set if using fallback
    - Ensure your TestZeus account is active
 
 4. **Template errors**
-   - Ensure `templates/ctrf-report.hbs` exists
+   - Ensure `templates/ctrf-report.hbs` exists when using the GitHub reporter with a custom template
    - Check Handlebars syntax in your template
 
 5. **Per-test environment issues**
@@ -894,9 +923,13 @@ This standardized format ensures compatibility with CTRF-compliant tools and ena
 
 6. **Hypermind code block issues**
    - Hypermind directories are optional - missing directory won't cause failures
-   - All files in the `hypermind/` directory will be uploaded as separate code blocks
+   - Files in `hypermind/` are uploaded as one code block with multiple `--file` args
    - Check that code files are readable and not binary
    - Verify file permissions if upload fails
+
+7. **GitLab clones old tag / missing `scripts/entrypoint.sh`**
+   - Set `TESTZEUS_ACTION_REF` on the **job** variables block
+   - See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 ### Debug Mode
 
@@ -927,3 +960,5 @@ For issues related to:
 - **GitHub Actions / GitLab CI / Bitbucket Pipelines**: See the respective platform docs
 
 Prefer `TESTZEUS_TOKEN` in CI. Pin consumers to `@v1` / `TESTZEUS_ACTION_REF=v1`. Use **self-test** to validate releases.
+
+**Docs for customers & agents:** [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md) · [AGENTS.md](AGENTS.md) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
