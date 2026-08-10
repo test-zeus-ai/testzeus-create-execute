@@ -8,3 +8,4 @@
 | [../CLAUDE.md](../CLAUDE.md) | Claude Code entrypoint → AGENTS.md |
 | [../README.md](../README.md) | Full product reference |
 | [../examples/smoke/](../examples/smoke/) | Minimal `./tests` fixture |
+| [../README.md#self-test--validation-consumers](../README.md#self-test--validation-consumers) | Cross-SCM smoke consumer repos (GitHub / GitLab / Bitbucket) |

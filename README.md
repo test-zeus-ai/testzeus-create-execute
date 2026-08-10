@@ -10,6 +10,7 @@ CI packaging that creates TestZeus tests from a `./tests` folder, runs them via 
 | **AI coding agents** | [AGENTS.md](AGENTS.md) · [CLAUDE.md](CLAUDE.md) |
 | **Failures** | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 | **Minimal fixture** | [examples/smoke/](examples/smoke/) |
+| **Cross-SCM smoke repos** (validate a branch/tag) | [Self-test & validation consumers](#self-test--validation-consumers) |
 
 **Supported CI systems**
 
@@ -284,7 +285,7 @@ Maintainers: push a semver tag (`v1.2.3`). The `release` workflow publishes the 
 
 Local Pipe debug: see [`bitbucket-pipe/README.md`](bitbucket-pipe/README.md) (`WORKDIR` mount path).
 
-## Self-test
+## Self-test & validation consumers
 
 This repo includes [`examples/smoke/`](examples/smoke/) and a `workflow_dispatch` workflow [`.github/workflows/self-test.yml`](.github/workflows/self-test.yml).
 
@@ -299,6 +300,20 @@ ln -sfn examples/smoke/tests tests
 export TESTZEUS_TOKEN='...'
 ./scripts/entrypoint.sh
 ```
+
+### Cross-SCM smoke repos (reference)
+
+Use these minimal consumer repos to validate a branch/tag of create-execute end-to-end. Pin `TESTZEUS_ACTION_REF` / `uses:` to the branch under test (e.g. a PR branch), then flip back to `@v1` after release.
+
+| SCM | Repo | How to run |
+|-----|------|------------|
+| **GitHub** | [test-zeus-ai/create-execute-gh-smoke](https://github.com/test-zeus-ai/create-execute-gh-smoke) (private) | Actions → **create-execute smoke** → Run workflow |
+| **GitLab** | [pritish.budhiraja1/testzeus-create-execute-smoke](https://gitlab.com/pritish.budhiraja1/testzeus-create-execute-smoke) | Push or trigger pipeline on `main` |
+| **Bitbucket** | [testzeus/testzeus-create-execute-smoke](https://bitbucket.org/testzeus/testzeus-create-execute-smoke) | Push or Run pipeline on `main` |
+
+Larger / scheduled platform suite (also consumes this action): [test-zeus-ai/platform-test-rig](https://github.com/test-zeus-ai/platform-test-rig).
+
+Each small smoke repo has a single `tests/test-smoke/` fixture (`example.com`). Secrets: `TESTZEUS_EMAIL` / `TESTZEUS_PASSWORD` (or `TESTZEUS_TOKEN` where supported).
 
 ## Usage
 

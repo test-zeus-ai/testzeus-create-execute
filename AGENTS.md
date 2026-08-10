@@ -192,6 +192,20 @@ export TESTZEUS_TOKEN='...'
 ./scripts/entrypoint.sh
 ```
 
+### Cross-SCM smoke consumers (reuse these)
+
+After script/template changes, pin each consumer to the branch under test and re-run:
+
+| SCM | Repo |
+|-----|------|
+| GitHub | https://github.com/test-zeus-ai/create-execute-gh-smoke |
+| GitLab | https://gitlab.com/pritish.budhiraja1/testzeus-create-execute-smoke |
+| Bitbucket | https://bitbucket.org/testzeus/testzeus-create-execute-smoke |
+
+Broader suite: https://github.com/test-zeus-ai/platform-test-rig  
+
+Details: [README.md § Self-test & validation consumers](README.md#self-test--validation-consumers).
+
 ---
 
 ## Known pitfall: GitLab `TESTZEUS_ACTION_REF`
