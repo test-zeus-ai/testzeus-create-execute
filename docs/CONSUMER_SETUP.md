@@ -56,6 +56,10 @@ Rules:
 - Top-level dirs must match `tests/test-*`.
 - Each test dir needs exactly one `.feature` file (name can vary).
 - Optional: `environment/`, `test-data/<case>/data.txt`, `hypermind/`.
+- Created TestZeus entity names (test, test-data, environment, hypermind) are
+  sanitized to **lowercase letters, numbers, and underscores only**, and must
+  start with a letter — e.g. folder `test-file_upload` + case `sf-data` becomes
+  `test_file_upload_sf_data_<seed>`, not `test-file_upload-sf-data-<seed>`.
 - Deep reference: [README.md](../README.md) (Repository Structure).
 
 Optional CTRF Handlebars template for GitHub pretty reports:

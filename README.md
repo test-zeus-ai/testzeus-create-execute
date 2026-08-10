@@ -100,6 +100,20 @@ your-repo/
    - Each file in the directory becomes a separate code block
    - Automatically linked to the test via `--hypermind-code-blocks` parameter
 
+## Entity naming
+
+TestZeus entity names (tests, test-data, environments, hypermind code blocks)
+must match: **only lowercase letters, numbers, and underscores; must start with
+a letter** (same rule as UIX `validateEntityName`).
+
+create-execute sanitizes folder/case names before create — hyphens become
+underscores. Example:
+
+```text
+tests/test-file_upload/test-data/sf-data/data.txt
+  → test_data name: test_file_upload_sf_data_<unix_seed>
+```
+
 ## Test Creation Logic
 
 The action follows this logic for creating tests:

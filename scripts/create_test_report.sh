@@ -2,6 +2,11 @@
 set -euo pipefail
 shopt -s nullglob
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/lib.sh"
+
 echo "Creating tests from ./tests directory..."
 SEED_ID=$(date +%s)
 ALL_TEST_IDS=""
@@ -12,10 +17,12 @@ create_test_record() {
   local test_env_id="$3"
   local hypermind_ids="$4"
   local test_data_ids="${5:-}"
+  local entity_name
+  entity_name="$(sanitize_entity_name "${test_name}_${SEED_ID}")"
   local -a create_cmd
   create_cmd=(
     testzeus --format json tests create
-    --name "${test_name}-${SEED_ID}"
+    --name "$entity_name"
     --feature-file "$feature_file"
     --status "ready"
   )
@@ -61,9 +68,10 @@ for test_dir in "${test_dirs[@]}"; do
 
     if [[ -f "$ENV_DATA_FILE" ]]; then
       echo "🌍 Creating environment for $TEST_NAME..."
+      ENV_ENTITY_NAME="$(sanitize_entity_name "${TEST_NAME}_env_${SEED_ID}")"
 
-      TEST_ENV_ID=$(testzeus --format json environments create --name "${TEST_NAME}-env-${SEED_ID}" --data-file "$ENV_DATA_FILE" | jq -r '.id')
-      echo "✅ Created environment ID: $TEST_ENV_ID"
+      TEST_ENV_ID=$(testzeus --format json environments create --name "$ENV_ENTITY_NAME" --data-file "$ENV_DATA_FILE" | jq -r '.id')
+      echo "✅ Created environment ID: $TEST_ENV_ID (name: $ENV_ENTITY_NAME)"
 
       EXTRA_JSON_FILE="$TEST_ENV_DIR/extra.json"
       if [[ -f "$EXTRA_JSON_FILE" ]]; then
@@ -108,7 +116,7 @@ for test_dir in "${test_dirs[@]}"; do
     if [[ "$has_hypermind_file" == true ]]; then
       echo "🧠 Processing Hypermind code blocks for $TEST_NAME..."
 
-      HYPERMIND_NAME="${TEST_NAME}-${SEED_ID}"
+      HYPERMIND_NAME="$(sanitize_entity_name "${TEST_NAME}_${SEED_ID}")"
       echo "📝 Creating Hypermind code block: $HYPERMIND_NAME"
 
       hypermind_cmd=(
@@ -163,9 +171,10 @@ for test_dir in "${test_dirs[@]}"; do
     fi
 
     echo "📄 Creating test-data for $TEST_NAME/$CASE_NAME..."
-    TEST_DATA_ID=$(testzeus --format json test-data create --name "${TEST_NAME}-${CASE_NAME}-${SEED_ID}" --data-file "$DATA_FILE" | jq -r '.id')
+    TEST_DATA_ENTITY_NAME="$(sanitize_entity_name "${TEST_NAME}_${CASE_NAME}_${SEED_ID}")"
+    TEST_DATA_ID=$(testzeus --format json test-data create --name "$TEST_DATA_ENTITY_NAME" --data-file "$DATA_FILE" | jq -r '.id')
 
-    echo "✅ Created test-data ID: $TEST_DATA_ID"
+    echo "✅ Created test-data ID: $TEST_DATA_ID (name: $TEST_DATA_ENTITY_NAME)"
 
     if [[ -z "$TEST_DATA_IDS" ]]; then
       TEST_DATA_IDS="$TEST_DATA_ID"
@@ -215,7 +224,6 @@ echo "Test IDs: $ALL_TEST_IDS"
 
 echo ""
 echo "🔄 Updating feature asset references..."
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/file_name_replacement.sh" "$ALL_TEST_IDS"
 
 mkdir -p downloads
