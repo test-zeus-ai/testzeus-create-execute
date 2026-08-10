@@ -160,7 +160,7 @@ Runtime needs: `bash`, `python`/`pip`, `jq`, network to TestZeus + PyPI (unless 
 | GitLab | `templates/gitlab-ci.yml`, `templates/create-execute/` |
 | Bitbucket | `templates/bitbucket-pipelines.yml`, `bitbucket-pipe/` |
 | Smoke fixture | `examples/smoke/` |
-| CI lint | `.github/workflows/ci.yml` (`bash -n`, shellcheck) |
+| CI lint | `.github/workflows/install-lint-build.yml` (`bash -n`, shellcheck) |
 | Self-test | `.github/workflows/self-test.yml` |
 | Release / GHCR | `.github/workflows/release.yml` on `v*` tags |
 
@@ -169,7 +169,7 @@ Rules:
 - Keep adapters thin: map secrets → env → `entrypoint.sh`.
 - Prefer `TESTZEUS_TOKEN` paths; keep email/password for backward compatibility.
 - Do not break existing GitHub Action users who still pass `email`/`password`.
-- After script changes: ensure `ci.yml` / shellcheck stay green; run self-test when auth secrets exist.
+- After script changes: ensure `install-lint-build` / shellcheck stay green; run self-test when auth secrets exist.
 - Document consumer-facing behavior in README + `docs/CONSUMER_SETUP.md`; keep this file for agent procedure.
 
 ---
