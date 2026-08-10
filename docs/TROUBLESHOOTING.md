@@ -70,10 +70,16 @@ Top-level `variables:` after `include:` alone may not override included defaults
 
 **Fix:**
 
-- Report is under `downloads/<REPORT_FILENAME>` (default `downloads/ctrf-report.json`).
-- GitLab artifact paths include `${REPORT_FILENAME}` and `downloads/`.
-- GitHub: add `actions/upload-artifact` if you need a downloadable zip.
+- Report path contract: `downloads/<REPORT_FILENAME>` (default `downloads/ctrf-report.json`) — written with `--output-dir downloads`.
+- GitLab / Bitbucket artifact paths should include `downloads/`.
+- GitHub reporter / upload-artifact should use `downloads/<filename>`.
 - Open job logs for create/execute errors before the artifact step.
+
+## Login prints ✅ but later steps fail
+
+**Cause (fixed in current scripts):** older password login used `|| true` and grepped for `Login failed`, treating other failures as success.
+
+**Fix:** Use a release that checks the CLI exit code for `testzeus login`. Wrong password must abort the job.
 
 ---
 

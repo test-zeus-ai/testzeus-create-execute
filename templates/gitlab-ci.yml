@@ -1,4 +1,7 @@
-# Include this file from a consumer GitLab project, or copy the job below.
+# Include this file from a consumer GitLab project.
+#
+# Exports only the hidden job `.testzeus-create-execute`. You must declare a
+# concrete job that `extends` it (see example below).
 #
 # Full E2E setup: docs/CONSUMER_SETUP.md  |  Agents: AGENTS.md
 #
@@ -7,12 +10,17 @@
 #     - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
 #   testzeus-create-execute:
 #     extends: .testzeus-create-execute
+#     stage: test
 #     variables:
-#       TESTZEUS_ACTION_REF: "v1"   # set on the job for reliable overrides
+#       TESTZEUS_ACTION_REF: "v1"
+#     rules:
+#       - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+#       - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 #
 # Preferred CI/CD variable (masked): TESTZEUS_TOKEN
 # Fallback: TESTZEUS_EMAIL + TESTZEUS_PASSWORD
 # Clone ref defaults to v1 via ${TESTZEUS_ACTION_REF:-v1} in before_script.
+# CTRF report path: downloads/${REPORT_FILENAME}
 
 variables:
   TEST_RUN_NAME: "Smoke action suite"
@@ -33,16 +41,5 @@ variables:
   artifacts:
     when: always
     paths:
-      - "${REPORT_FILENAME}"
       - downloads/
     expire_in: 7 days
-
-testzeus-create-execute:
-  extends: .testzeus-create-execute
-  stage: test
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_PIPELINE_SOURCE == "web"
-    - if: $CI_PIPELINE_SOURCE == "api"
-    - if: $CI_PIPELINE_SOURCE == "trigger"

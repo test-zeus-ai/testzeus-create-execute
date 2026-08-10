@@ -2,6 +2,9 @@
 # Shared helpers for TestZeus create-execute scripts.
 # shellcheck shell=bash
 
+# Bump deliberately when validating a new CLI; override via TESTZEUS_CLI_VERSION.
+: "${TESTZEUS_CLI_VERSION:=0.0.30}"
+
 require_bin() {
   local name="$1"
   if ! command -v "$name" >/dev/null 2>&1; then
@@ -46,11 +49,8 @@ EOF
 
   if [[ -n "${TESTZEUS_EMAIL:-}" && -n "${TESTZEUS_PASSWORD:-}" ]]; then
     echo "🔐 Logging into TestZeus with email/password..."
-    local login_output
-    login_output="$(testzeus login --email "$TESTZEUS_EMAIL" --password "$TESTZEUS_PASSWORD" 2>&1 || true)"
-    if echo "$login_output" | grep -q "Login failed"; then
+    if ! testzeus login --email "$TESTZEUS_EMAIL" --password "$TESTZEUS_PASSWORD"; then
       echo "❌ Login failed: aborting."
-      echo "$login_output"
       exit 1
     fi
     echo "✅ Successfully logged into TestZeus."

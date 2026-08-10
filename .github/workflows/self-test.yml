@@ -42,7 +42,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ctrf-report
-          path: |
-            ctrf-report.json
-            downloads/**
+          path: downloads/**
           if-no-files-found: warn

@@ -28,7 +28,6 @@ definitions:
           - chmod +x /tmp/testzeus-create-execute/scripts/entrypoint.sh
           - /tmp/testzeus-create-execute/scripts/entrypoint.sh
         artifacts:
-          - "*.json"
           - downloads/**
 
 pipelines:

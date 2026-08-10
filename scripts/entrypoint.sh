@@ -9,8 +9,8 @@ source "${SCRIPT_DIR}/lib.sh"
 set_run_defaults
 
 if [[ "${TESTZEUS_SKIP_INSTALL:-}" != "true" ]]; then
-  echo "📦 Installing dependencies..."
-  pip install --upgrade testzeus-cli python-dateutil
+  echo "📦 Installing dependencies (testzeus-cli==${TESTZEUS_CLI_VERSION})..."
+  pip install "testzeus-cli==${TESTZEUS_CLI_VERSION}" python-dateutil
 fi
 
 require_bin jq

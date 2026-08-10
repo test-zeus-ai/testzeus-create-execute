@@ -37,6 +37,5 @@ create-execute:
   artifacts:
     when: always
     paths:
-      - $[[ inputs.filename ]]
       - downloads/
     expire_in: 7 days

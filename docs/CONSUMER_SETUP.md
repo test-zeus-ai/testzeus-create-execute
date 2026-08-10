@@ -134,6 +134,7 @@ Upload artifact example:
 include:
   - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
 
+# Required: template only exports the hidden job `.testzeus-create-execute`
 testzeus-create-execute:
   extends: .testzeus-create-execute
   stage: test
@@ -153,7 +154,7 @@ testzeus-create-execute:
 3. Ensure `./tests` is committed on the branch that runs CI.
 4. Run pipeline (push, MR, or **CI/CD → Pipelines → Run**).
 5. Job log should show `Cloning testzeus-create-execute@v1` then entrypoint progress.
-6. Download job artifacts: `ctrf-report.json` / `downloads/`.
+6. Download job artifacts from `downloads/` (e.g. `downloads/ctrf-report.json`).
 
 **GitLab component** (when vendored on your GitLab):
 
@@ -192,7 +193,6 @@ pipelines:
           - chmod +x /tmp/testzeus-create-execute/scripts/entrypoint.sh
           - /tmp/testzeus-create-execute/scripts/entrypoint.sh
         artifacts:
-          - "*.json"
           - downloads/**
 ```
 
@@ -219,7 +219,7 @@ script:
 | Auth | No login/session-exchange error |
 | Discovery | Logs mention creating tests from `./tests/test-*` |
 | Execute | Run group monitor completes |
-| Report | `downloads/<REPORT_FILENAME>` exists as artifact |
+| Report | `downloads/<REPORT_FILENAME>` exists (default `downloads/ctrf-report.json`) |
 | Clone ref (GL/BB) | Log shows intended tag/branch (e.g. `v1`) |
 
 Local dry-run (machine with Python + network):

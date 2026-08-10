@@ -259,12 +259,15 @@ Adapters map CI secrets/inputs into these env vars before calling `scripts/entry
 | `TESTZEUS_PASSWORD` | Fallback | — | Login password when token is unset |
 | `TEST_RUN_NAME` | No | `Smoke action suite` | Test run group name |
 | `EXECUTION_MODE` | No | `lenient` | `lenient` or `strict` |
-| `REPORT_FILENAME` | No | `ctrf-report.json` | CTRF output filename |
+| `REPORT_FILENAME` | No | `ctrf-report.json` | CTRF filename under `downloads/` |
 | `NOTIFICATION_CHANNELS` | No | _(empty)_ | Comma-separated channel IDs |
 | `TESTZEUS_SKIP_INSTALL` | No | _(unset)_ | Set `true` to skip `pip install` (Bitbucket Pipe image) |
 | `TESTZEUS_PROFILE` | No | `ci` | CLI profile name used for token auth |
+| `TESTZEUS_CLI_VERSION` | No | `0.0.30` | Pinned `testzeus-cli` version installed by entrypoint |
 
 The runner must have `bash`, `pip`/`python`, and the `jq` binary available.
+
+CTRF report path: **`downloads/<REPORT_FILENAME>`** (default `downloads/ctrf-report.json`).
 
 ## Versioning
 
@@ -275,8 +278,9 @@ Pin consumers to a release tag, not `main`:
 | GitHub Action | `uses: test-zeus-ai/testzeus-create-execute@v1` |
 | GitLab / Bitbucket clone | `TESTZEUS_ACTION_REF=v1` (default in templates) |
 | Bitbucket Pipe image | `ghcr.io/test-zeus-ai/testzeus-create-execute:v1` |
+| TestZeus CLI (PyPI) | `testzeus-cli==0.0.30` (override with `TESTZEUS_CLI_VERSION`) |
 
-Maintainers: push a semver tag (`v1.2.3`). The `release` workflow publishes the GHCR image and a GitHub Release. Move the floating `v1` tag to the latest compatible release when shipping.
+Maintainers: push a semver tag (`v1.2.3`). The `release` workflow publishes the GHCR image and a GitHub Release. Move the floating `v1` tag to the latest compatible release when shipping — `@v1` / `:v1` move with that tag. Bump the pinned CLI in `scripts/lib.sh` + `bitbucket-pipe/Dockerfile` deliberately and note it in release notes.
 
 ## Self-test
 
@@ -344,11 +348,12 @@ Set masked `TESTZEUS_TOKEN` (preferred) or `TESTZEUS_EMAIL` + `TESTZEUS_PASSWORD
 
 **Include (remote template, pinned to `v1`):**
 
+The template exports only the hidden job `.testzeus-create-execute`. Declare a concrete job that `extends` it:
+
 ```yaml
 include:
   - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
 
-# Override on the job — top-level variables after include are not always applied
 testzeus-create-execute:
   extends: .testzeus-create-execute
   stage: test
@@ -357,9 +362,12 @@ testzeus-create-execute:
     TEST_RUN_NAME: "CI Smoke Tests"
     EXECUTION_MODE: "lenient"
     REPORT_FILENAME: "ctrf-report.json"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 ```
 
-The job clones this repository at `TESTZEUS_ACTION_REF` (shell default `v1`), runs `scripts/entrypoint.sh`, and uploads the CTRF file as a job artifact. Confirm the log shows `Cloning testzeus-create-execute@v1`. If you see `chmod: ... entrypoint.sh: No such file`, the wrong ref was cloned — see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+The job clones this repository at `TESTZEUS_ACTION_REF` (shell default `v1`), runs `scripts/entrypoint.sh`, and uploads `downloads/` as a job artifact. Confirm the log shows `Cloning testzeus-create-execute@v1`. If you see `chmod: ... entrypoint.sh: No such file`, the wrong ref was cloned — see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
 **CI/CD Component** (when published / vendored):
 
@@ -401,7 +409,6 @@ pipelines:
           - git clone --depth 1 --branch "${TESTZEUS_ACTION_REF}" https://github.com/test-zeus-ai/testzeus-create-execute.git /tmp/testzeus-create-execute
           - /tmp/testzeus-create-execute/scripts/entrypoint.sh
         artifacts:
-          - "*.json"
           - downloads/**
 ```
 

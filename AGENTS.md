@@ -13,7 +13,7 @@ CI packaging that:
 1. Reads `./tests/test-*` folders (Gherkin `.feature` + optional env / test-data / hypermind)
 2. Creates matching TestZeus resources via `testzeus-cli`
 3. Runs `test-run-group execute-and-monitor`
-4. Writes a CTRF report under `downloads/`
+4. Writes a CTRF report to `downloads/<REPORT_FILENAME>`
 
 | Platform | Entry | Orchestrator |
 |----------|--------|--------------|
@@ -101,6 +101,8 @@ CTRF path: `downloads/<filename>`. Optional pretty PR report: `ctrf-io/github-te
 
 ### GitLab CI
 
+Template exports **only** `.testzeus-create-execute` — declare a concrete job:
+
 ```yaml
 include:
   - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
@@ -116,7 +118,7 @@ testzeus-create-execute:
     REPORT_FILENAME: "ctrf-report.json"
 ```
 
-CI/CD Variables: `TESTZEUS_TOKEN` (masked). Artifact: `ctrf-report.json` + `downloads/`.
+CI/CD Variables: `TESTZEUS_TOKEN` (masked). Artifact: `downloads/`.
 
 ### Bitbucket Pipelines
 
@@ -145,6 +147,7 @@ script:
 | `TESTZEUS_ACTION_REF` | GitLab/BB clone | `v1` | Git tag/branch to clone |
 | `TESTZEUS_SKIP_INSTALL` | Pipe image | unset | `true` skips `pip install` |
 | `TESTZEUS_PROFILE` | Token auth | `ci` | CLI profile name |
+| `TESTZEUS_CLI_VERSION` | No | `0.0.30` | Pinned PyPI CLI version |
 
 Runtime needs: `bash`, `python`/`pip`, `jq`, network to TestZeus + PyPI (unless skip install).
 
