@@ -219,14 +219,45 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/file_name_replacement.sh" "$ALL_TEST_IDS"
 
 mkdir -p downloads
+REPORT_PATH="downloads/${REPORT_FILENAME}"
 
 echo ""
 echo "Running test-run-group and generating CTRF report..."
-testzeus test-run-group execute-and-monitor \
-  --name "$TEST_RUN_NAME" \
-  --test-ids "$ALL_TEST_IDS" \
-  --interval 60 \
-  --filename "$REPORT_FILENAME" \
-  --output-dir downloads \
-  --notification-channels "$NOTIFICATION_CHANNELS" \
+# Avoid passing an empty --notification-channels flag (some CLI versions mishandle it).
+execute_cmd=(
+  testzeus test-run-group execute-and-monitor
+  --name "$TEST_RUN_NAME"
+  --test-ids "$ALL_TEST_IDS"
+  --interval 60
+  --filename "$REPORT_FILENAME"
+  --output-dir downloads
   --execution-mode "${EXECUTION_MODE:-lenient}"
+)
+if [[ -n "${NOTIFICATION_CHANNELS}" ]]; then
+  execute_cmd+=(--notification-channels "$NOTIFICATION_CHANNELS")
+fi
+
+set +e
+"${execute_cmd[@]}"
+execute_rc=$?
+set -e
+
+# CLI downloads as test_report_<id>.json then renames; if rename/exit fails after a
+# successful run, normalize to the contracted REPORT_FILENAME path.
+if [[ ! -f "$REPORT_PATH" ]]; then
+  shopt -s nullglob
+  candidates=(downloads/test_report_*.json downloads/*.json)
+  shopt -u nullglob
+  if (( ${#candidates[@]} > 0 )); then
+    mv -f "${candidates[0]}" "$REPORT_PATH"
+    echo "Normalized CTRF report to ${REPORT_PATH}"
+  fi
+fi
+
+if [[ -f "$REPORT_PATH" ]]; then
+  echo "✅ CTRF report available at ${REPORT_PATH}"
+  exit 0
+fi
+
+echo "❌ execute-and-monitor failed and no CTRF report was produced at ${REPORT_PATH}"
+exit "${execute_rc:-1}"
