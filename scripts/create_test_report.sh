@@ -62,7 +62,7 @@ for test_dir in "${test_dirs[@]}"; do
     if [[ -f "$ENV_DATA_FILE" ]]; then
       echo "🌍 Creating environment for $TEST_NAME..."
 
-      TEST_ENV_ID=$(testzeus --format json environments create --name "${TEST_NAME}-env-${SEED_ID}" --data-file "$ENV_DATA_FILE" --status "ready" | jq -r '.id')
+      TEST_ENV_ID=$(testzeus --format json environments create --name "${TEST_NAME}-env-${SEED_ID}" --data-file "$ENV_DATA_FILE" | jq -r '.id')
       echo "✅ Created environment ID: $TEST_ENV_ID"
 
       EXTRA_JSON_FILE="$TEST_ENV_DIR/extra.json"
@@ -163,7 +163,7 @@ for test_dir in "${test_dirs[@]}"; do
     fi
 
     echo "📄 Creating test-data for $TEST_NAME/$CASE_NAME..."
-    TEST_DATA_ID=$(testzeus --format json test-data create --name "${TEST_NAME}-${CASE_NAME}-${SEED_ID}" --data-file "$DATA_FILE" --status "ready" | jq -r '.id')
+    TEST_DATA_ID=$(testzeus --format json test-data create --name "${TEST_NAME}-${CASE_NAME}-${SEED_ID}" --data-file "$DATA_FILE" | jq -r '.id')
 
     echo "✅ Created test-data ID: $TEST_DATA_ID"
 
@@ -255,7 +255,11 @@ if [[ ! -f "$REPORT_PATH" ]]; then
 fi
 
 if [[ -f "$REPORT_PATH" ]]; then
-  echo "✅ CTRF report available at ${REPORT_PATH}"
+  # Keep downloads/ as the canonical artifact path, and mirror to workspace root
+  # so existing GitHub consumers (e.g. platform-test-rig) that read REPORT_FILENAME
+  # from the checkout root keep working.
+  cp -f "$REPORT_PATH" "./${REPORT_FILENAME}"
+  echo "✅ CTRF report available at ${REPORT_PATH} (and ./${REPORT_FILENAME})"
   exit 0
 fi
 
