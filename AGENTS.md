@@ -1,6 +1,6 @@
 # AGENTS.md — TestZeus Create & Execute
 
-Guidance for **Claude Code**, **GitHub Copilot**, and other coding agents working in this repository **or** wiring it into a customer CI repo.
+Guidance for coding agents (including Claude Code and GitHub Copilot) working in this repository **or** wiring it into a customer CI repo.
 
 Humans: start with [README.md](README.md) and [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md).
 

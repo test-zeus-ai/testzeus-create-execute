@@ -7,7 +7,7 @@ CI packaging that creates TestZeus tests from a `./tests` folder, runs them via 
 | Goal | Doc |
 |------|-----|
 | **End-to-end setup** (GitHub / GitLab / Bitbucket) | [docs/CONSUMER_SETUP.md](docs/CONSUMER_SETUP.md) |
-| **AI coding agents** (Claude / Copilot) | [AGENTS.md](AGENTS.md) · [CLAUDE.md](CLAUDE.md) |
+| **AI coding agents** | [AGENTS.md](AGENTS.md) · [CLAUDE.md](CLAUDE.md) |
 | **Failures** | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 | **Minimal fixture** | [examples/smoke/](examples/smoke/) |
 
