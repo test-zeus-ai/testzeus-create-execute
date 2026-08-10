@@ -3,15 +3,16 @@
 # Example (.gitlab-ci.yml):
 #   include:
 #     - remote: 'https://raw.githubusercontent.com/test-zeus-ai/testzeus-create-execute/v1/templates/gitlab-ci.yml'
+#   variables:
+#     TESTZEUS_ACTION_REF: "v1"   # optional; shell default is v1
 #
 # Preferred CI/CD variable (masked): TESTZEUS_TOKEN
 # Fallback: TESTZEUS_EMAIL + TESTZEUS_PASSWORD
 #
-# Override TESTZEUS_ACTION_REF (and other vars) at the pipeline top level or via
-# CI/CD settings — do not redefine them on the job, or they win over consumers.
+# Pin TESTZEUS_ACTION_REF via pipeline variables or CI/CD settings.
+# Do not set it on this hidden job — job keys beat consumer top-level vars.
 
 variables:
-  TESTZEUS_ACTION_REF: "v1"
   TEST_RUN_NAME: "Smoke action suite"
   EXECUTION_MODE: "lenient"
   REPORT_FILENAME: "ctrf-report.json"
@@ -21,6 +22,8 @@ variables:
   image: python:3.12-slim
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends jq git ca-certificates
+    - export TESTZEUS_ACTION_REF="${TESTZEUS_ACTION_REF:-v1}"
+    - echo "Cloning testzeus-create-execute@${TESTZEUS_ACTION_REF}"
     - git clone --depth 1 --branch "${TESTZEUS_ACTION_REF}" https://github.com/test-zeus-ai/testzeus-create-execute.git /tmp/testzeus-create-execute
     - chmod +x /tmp/testzeus-create-execute/scripts/entrypoint.sh
   script:
@@ -38,3 +41,6 @@ testzeus-create-execute:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "api"
+    - if: $CI_PIPELINE_SOURCE == "trigger"
